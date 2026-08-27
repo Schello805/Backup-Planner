@@ -1,7 +1,5 @@
 # Backup Planner
 
-![Backup Planner logo](public/logo.png)
-
 Backup Planner is a self-hosted web application for planning, visualizing, and improving backup strategies. It does **not** execute backups and never needs access to your files or backup credentials.
 
 ## Highlights
