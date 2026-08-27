@@ -1,0 +1,8 @@
+[Unit]
+Description=Create a Backup Planner data backup
+After=backup-planner.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/backup-planner/environment
+ExecStart=/opt/backup-planner/scripts/backup.sh

@@ -1,0 +1,55 @@
+import Fastify from 'fastify';
+import helmet from '@fastify/helmet';
+import cors from '@fastify/cors';
+import statik from '@fastify/static';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { z } from 'zod';
+import { db, entities, id, now, bool, listAll, cleanTrash, backupDir } from './db.js';
+import { scoreStrategy } from './scoring.js';
+
+const app=Fastify({logger:true,bodyLimit:5*1024*1024});
+await app.register(helmet,{contentSecurityPolicy:false});
+await app.register(cors,{origin:false});
+cleanTrash();
+const repo=process.env.GITHUB_REPOSITORY||'Schello805/Backup-Planner';
+const version=process.env.APP_VERSION||process.env.npm_package_version||'0.1.0';
+let releaseCache:{at:number,data:any}|null=null;
+
+app.get('/api/health',async()=>({ok:true,version}));
+app.get('/api/data',async()=>{const data=listAll();return {...data,analysis:scoreStrategy(data),meta:{version,repo}}});
+app.get('/api/trash',async()=>{const all=listAll(true);return {plans:all.plans.filter((x:any)=>x.deleted_at),locations:all.locations.filter((x:any)=>x.deleted_at),sources:all.sources.filter((x:any)=>x.deleted_at),targets:all.targets.filter((x:any)=>x.deleted_at),datasets:all.datasets.filter((x:any)=>x.deleted_at),software:all.software.filter((x:any)=>x.deleted_at)}});
+
+for(const [name,config] of Object.entries(entities)){
+  app.post(`/api/${name}`,async(req,reply)=>{const body=req.body as Record<string,any>;if(!body?.name?.trim())return reply.code(400).send({error:'Name is required'});const rowId=id(),stamp=now();const vals=config.fields.map(f=>config.bools.includes(f as never)?bool(body[f]):(body[f]??(['notes','provider'].includes(f)?'':null)));db.prepare(`INSERT INTO ${config.table}(id,${config.fields.join(',')},created_at,updated_at) VALUES(?,${config.fields.map(()=>'?').join(',')},?,?)`).run(rowId,...vals,stamp,stamp);return {id:rowId};});
+  app.put(`/api/${name}/:id`,async(req,reply)=>{const body=req.body as Record<string,any>;const rowId=(req.params as any).id;if(!body?.name?.trim())return reply.code(400).send({error:'Name is required'});const vals=config.fields.map(f=>config.bools.includes(f as never)?bool(body[f]):(body[f]??null));const result=db.prepare(`UPDATE ${config.table} SET ${config.fields.map(f=>`${f}=?`).join(',')},updated_at=? WHERE id=? AND deleted_at IS NULL`).run(...vals,now(),rowId);return result.changes?{ok:true}:reply.code(404).send({error:'Not found'});});
+  app.delete(`/api/${name}/:id`,async(req,_reply)=>{const rowId=(req.params as any).id;const refs:{[k:string]:Array<[string,string]>}={locations:[['sources','location_id'],['targets','location_id'],['locations','parent_id']],sources:[['datasets','source_id'],['plans','source_id']],targets:[['plans','target_id']],datasets:[['plan_datasets','dataset_id']],software:[['plans','software_id']]};const used=(refs[name]||[]).some(([table,col])=>!!db.prepare(`SELECT 1 FROM ${table} WHERE ${col}=? LIMIT 1`).get(rowId));if(used){db.prepare(`UPDATE ${config.table} SET active=0,updated_at=? WHERE id=?`).run(now(),rowId);return {ok:true,deactivated:true}}db.prepare(`UPDATE ${config.table} SET deleted_at=?,active=0 WHERE id=?`).run(now(),rowId);return {ok:true};});
+  app.post(`/api/${name}/:id/restore`,async(req)=>{db.prepare(`UPDATE ${config.table} SET deleted_at=NULL,active=1,updated_at=? WHERE id=?`).run(now(),(req.params as any).id);return {ok:true};});
+  app.delete(`/api/${name}/:id/permanent`,async(req)=>{db.prepare(`DELETE FROM ${config.table} WHERE id=? AND deleted_at IS NOT NULL`).run((req.params as any).id);return {ok:true};});
+}
+
+const planSchema=z.object({name:z.string().min(1),source_id:z.string().min(1),target_id:z.string().min(1),software_id:z.string().nullable().optional(),dataset_ids:z.array(z.string()).min(1),protection_type:z.enum(['backup','synchronization','archive']),schedule_type:z.enum(['daily','weekly','monthly','manual']),weekdays:z.array(z.number().int().min(0).max(6)).default([]),day_of_month:z.number().int().min(1).max(31).nullable().optional(),start_time:z.string().default('03:00'),duration_minutes:z.number().int().min(1).max(10080),retention_value:z.number().int().positive().nullable().optional(),retention_unit:z.string().nullable().optional(),version_count:z.number().int().positive().nullable().optional(),immutable:z.boolean().default(false),encrypted:z.boolean().default(false),owner:z.string().default(''),color:z.string().default('#3478f6'),notes:z.string().default(''),active:z.boolean().default(true)});
+function savePlan(body:unknown,rowId=id()){const p=planSchema.parse(body);const stamp=now();const fields=['name','source_id','target_id','software_id','protection_type','schedule_type','weekdays','day_of_month','start_time','duration_minutes','retention_value','retention_unit','version_count','immutable','encrypted','owner','color','notes','active'];const vals=fields.map(f=>f==='weekdays'?JSON.stringify(p.weekdays):['immutable','encrypted','active'].includes(f)?bool((p as any)[f]):(p as any)[f]??null);db.transaction(()=>{const exists=db.prepare('SELECT 1 FROM plans WHERE id=?').get(rowId);if(exists)db.prepare(`UPDATE plans SET ${fields.map(f=>`${f}=?`).join(',')},updated_at=?,deleted_at=NULL WHERE id=?`).run(...vals,stamp,rowId);else db.prepare(`INSERT INTO plans(id,${fields.join(',')},created_at,updated_at) VALUES(?,${fields.map(()=>'?').join(',')},?,?)`).run(rowId,...vals,stamp,stamp);db.prepare('DELETE FROM plan_datasets WHERE plan_id=?').run(rowId);const ins=db.prepare('INSERT INTO plan_datasets(plan_id,dataset_id) VALUES(?,?)');p.dataset_ids.forEach(d=>ins.run(rowId,d));})();return {id:rowId};}
+app.post('/api/plans',async(req)=>savePlan(req.body));
+app.put('/api/plans/:id',async(req)=>savePlan(req.body,(req.params as any).id));
+app.delete('/api/plans/:id',async(req)=>{db.prepare('UPDATE plans SET deleted_at=?,active=0 WHERE id=?').run(now(),(req.params as any).id);return {ok:true}});
+app.post('/api/plans/:id/restore',async(req)=>{db.prepare('UPDATE plans SET deleted_at=NULL,active=1,updated_at=? WHERE id=?').run(now(),(req.params as any).id);return {ok:true}});
+app.delete('/api/plans/:id/permanent',async(req)=>{db.prepare('DELETE FROM plans WHERE id=? AND deleted_at IS NOT NULL').run((req.params as any).id);return {ok:true}});
+
+function snapshot(){const stamp=new Date().toISOString().replace(/[:.]/g,'-');const name=`backup-planner-${stamp}.json`;fs.writeFileSync(path.join(backupDir,name),JSON.stringify({format:1,createdAt:now(),version,data:listAll(true)},null,2));const files=fs.readdirSync(backupDir).filter(x=>x.endsWith('.json')).sort().reverse();files.slice(10).forEach(x=>fs.unlinkSync(path.join(backupDir,x)));return name;}
+app.get('/api/export',async(_req,reply)=>reply.header('content-disposition',`attachment; filename="backup-planner-export.json"`).send({format:1,createdAt:now(),version,data:listAll(true)}));
+app.get('/api/export.csv',async(_req,reply)=>{const data=listAll();const quote=(v:any)=>`"${String(v??'').replaceAll('"','""')}"`;const source=new Map((data.sources as any[]).map(x=>[x.id,x.name])),target=new Map((data.targets as any[]).map(x=>[x.id,x.name])),datasets=new Map((data.datasets as any[]).map(x=>[x.id,x.name]));const rows=[['Name','Source','Target','Datasets','Protection','Schedule','Start','Duration (min)','Active'],...(data.plans as any[]).map(p=>[p.name,source.get(p.source_id),target.get(p.target_id),p.dataset_ids.map((x:string)=>datasets.get(x)).join('; '),p.protection_type,p.schedule_type,p.start_time,p.duration_minutes,p.active?'yes':'no'])];return reply.header('content-disposition','attachment; filename="backup-planner-plans.csv"').type('text/csv; charset=utf-8').send('\uFEFF'+rows.map(r=>r.map(quote).join(',')).join('\n'))});
+app.get('/api/backups',async()=>({folder:backupDir,files:fs.readdirSync(backupDir).filter(x=>x.endsWith('.json')).sort().reverse().map(name=>{const s=fs.statSync(path.join(backupDir,name));return {name,size:s.size,createdAt:s.birthtime.toISOString()}})}));
+app.post('/api/backups',async()=>({name:snapshot()}));
+app.get('/api/backups/:name/download',async(req,reply)=>{const name=path.basename((req.params as any).name);return reply.header('content-disposition',`attachment; filename="${name}"`).type('application/json').send(fs.createReadStream(path.join(backupDir,name)))});
+app.delete('/api/backups/:name',async(req)=>{fs.unlinkSync(path.join(backupDir,path.basename((req.params as any).name)));return {ok:true}});
+app.post('/api/backups/:name/restore',async(req,reply)=>{const name=path.basename((req.params as any).name);const parsed=JSON.parse(fs.readFileSync(path.join(backupDir,name),'utf8'));if(parsed?.format!==1)return reply.code(400).send({error:'Unsupported backup format'});snapshot();restoreData(parsed.data);return {ok:true}});
+
+function restoreData(data:any){db.transaction(()=>{['plan_datasets','plans','datasets','targets','sources','software','locations','settings'].forEach(t=>db.prepare(`DELETE FROM ${t}`).run());const insert=(table:string,rows:any[])=>{for(const row of rows||[]){const clean={...row};delete clean.dataset_ids;if(Array.isArray(clean.weekdays))clean.weekdays=JSON.stringify(clean.weekdays);const keys=Object.keys(clean);db.prepare(`INSERT INTO ${table}(${keys.join(',')}) VALUES(${keys.map(()=>'?').join(',')})`).run(...keys.map(k=>clean[k]));if(table==='plans')for(const d of row.dataset_ids||[])db.prepare('INSERT INTO plan_datasets(plan_id,dataset_id) VALUES(?,?)').run(row.id,d)}};insert('locations',data.locations);insert('sources',data.sources);insert('targets',data.targets);insert('software',data.software);insert('datasets',data.datasets);insert('plans',data.plans);for(const [key,value] of Object.entries(data.settings||{}))db.prepare('INSERT INTO settings(key,value) VALUES(?,?)').run(key,String(value));})();}
+app.post('/api/import',async(req,reply)=>{const payload=req.body as any;if(payload?.format!==1)return reply.code(400).send({error:'Unsupported backup format'});snapshot();restoreData(payload.data);return {ok:true}});
+app.get('/api/release',async(req)=>{const force=(req.query as any)?.force==='1';if(!force&&releaseCache&&Date.now()-releaseCache.at<300000)return releaseCache.data;try{const res=await fetch(`https://api.github.com/repos/${repo}/releases/latest`,{headers:{'user-agent':'Backup-Planner'}});if(!res.ok)throw new Error(String(res.status));const json:any=await res.json();const data={current:version,latest:String(json.tag_name||'').replace(/^v/,''),url:json.html_url,notes:json.body||'',available:String(json.tag_name||'').replace(/^v/,'')!==version};releaseCache={at:Date.now(),data};return data}catch{return {current:version,available:false,unavailable:true}}});
+
+const dist=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../dist');
+if(fs.existsSync(dist)){await app.register(statik,{root:dist});app.setNotFoundHandler((req,reply)=>req.url.startsWith('/api/')?reply.code(404).send({error:'Not found'}):reply.sendFile('index.html'));}
+await app.listen({host:process.env.HOST||'0.0.0.0',port:Number(process.env.PORT||3000)});
