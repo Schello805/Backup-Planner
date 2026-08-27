@@ -10,8 +10,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Package source release
-        run: tar --exclude=.git --exclude=node_modules -czf "backup-planner-${GITHUB_REF_NAME}.tar.gz" .
+        run: tar --exclude=.git --exclude=node_modules -czf "/tmp/backup-planner-${GITHUB_REF_NAME}.tar.gz" .
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: backup-planner-${{ github.ref_name }}.tar.gz
+          files: /tmp/backup-planner-${{ github.ref_name }}.tar.gz
