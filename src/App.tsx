@@ -1,11 +1,11 @@
 import{useEffect,useState}from'react';
-import{Activity,Archive,CalendarDays,ChevronRight,CircleHelp,Database,Download,Edit3,FolderArchive,Github,HardDrive,Languages,LayoutDashboard,MapPin,Moon,Plus,RefreshCw,Search,Server,Settings as SettingsIcon,ShieldCheck,Sun,Trash2,TriangleAlert,X}from'lucide-react';
+import{Activity,Archive,CalendarDays,ChevronRight,CircleHelp,Database,Download,Edit3,FolderArchive,Github,HardDrive,Info,Languages,LayoutDashboard,MapPin,Moon,Plus,RefreshCw,Search,Server,Settings as SettingsIcon,ShieldCheck,Sun,Trash2,TriangleAlert,X}from'lucide-react';
 import{addDays,addMonths,eachDayOfInterval,endOfMonth,format,startOfMonth,startOfWeek}from'date-fns';import{de,enUS}from'date-fns/locale';
 import{api}from'./api';import{useCopy,type Lang}from'./i18n';import type{AppData,Entity,Plan}from'./types';
 import{getHelp}from'./help';
 
 type View='dashboard'|'plans'|'schedule'|'settings';
-const blankPlan={name:'',source_id:'',target_id:'',software_id:null,dataset_ids:[],protection_type:'backup',schedule_type:'weekly',weekdays:[1],day_of_month:1,start_time:'03:00',duration_minutes:30,retention_value:null,retention_unit:'days',version_count:null,immutable:false,encrypted:false,owner:'',color:'#3478f6',notes:'',active:true};
+const blankPlan={name:'',source_id:'',target_id:'',software_id:null,dataset_ids:[],protection_type:'backup',schedule_type:'weekly',weekdays:[],day_of_month:1,start_time:'03:00',duration_minutes:30,retention_value:null,retention_unit:'days',version_count:null,immutable:false,encrypted:false,owner:'',color:'#3478f6',notes:'',active:true};
 const entityDefaults:Record<string,any>={locations:{name:'',type:'site',parent_id:null,notes:'',active:true},sources:{name:'',location_id:null,device_type:'computer',notes:'',active:true},targets:{name:'',location_id:null,storage_type:'nas',provider:'',immutable_capable:false,encrypted_default:false,notes:'',active:true},datasets:{name:'',source_id:'',priority:'normal',notes:'',active:true},software:{name:'',notes:'',active:true}};
 const iconByView={dashboard:LayoutDashboard,plans:Database,schedule:CalendarDays,settings:SettingsIcon};
 
@@ -350,15 +350,15 @@ function SystemSettings({t,lang,theme,setLang,setTheme,backups,loadBackups,relea
 </div>
 </>}
 
-function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h=getHelp(lang);const[attempted,setAttempted]=useState(false);const set=(k:string,v:any)=>setValue({...value,[k]:v});const datasets=data.datasets.filter((d:Entity)=>d.source_id===value.source_id&&d.active);return <Modal title={value.id?t('edit'):t('newPlan')} close={()=>setValue(null)}>
+function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h=getHelp(lang);const[attempted,setAttempted]=useState(false);const[durationUnit,setDurationUnit]=useState<'minutes'|'hours'>(()=>value.duration_minutes>=60&&value.duration_minutes%60===0?'hours':'minutes');const set=(k:string,v:any)=>setValue({...value,[k]:v});const datasets=data.datasets.filter((d:Entity)=>d.source_id===value.source_id&&d.active);const durationValue=durationUnit==='hours'?value.duration_minutes/60:value.duration_minutes;return <Modal title={value.id?t('edit'):t('newPlan')} close={()=>setValue(null)}>
 <div className="form-grid">
 <Field label={t('name')} help={h.name} wide>
 <input value={value.name} onChange={e=>set('name',e.target.value)} autoFocus/>
 </Field>
-<Field label={t('source')}>
+<Field label={t('source')} help={h.planSource}>
 <Select value={value.source_id} onChange={(v:string)=>setValue({...value,source_id:v,dataset_ids:[]})} options={data.sources}/>
 </Field>
-<Field label={t('target')}>
+<Field label={t('target')} help={h.planTarget}>
 <Select value={value.target_id} onChange={(v:string)=>set('target_id',v)} options={data.targets}/>
 </Field>
 <Field label={t('dataset')} help={h.planDatasets} wide>
@@ -368,49 +368,50 @@ function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h
     <label key={d.id}><input type="checkbox" checked={value.dataset_ids.includes(d.id)} onChange={e=>set('dataset_ids',e.target.checked?[...value.dataset_ids,d.id]:value.dataset_ids.filter((x:string)=>x!==d.id))}/><span><b>{d.name}</b><small>{t(d.priority)}</small></span></label>)}</div>}
   {attempted&&value.dataset_ids.length===0&&datasets.length>0&&<p className="field-error"><TriangleAlert/>{h.selectOne}</p>}
 </Field>
-<Field label={t('type')}>
+<Field label={t('type')} help={h.protectionType}>
 <select value={value.protection_type} onChange={e=>set('protection_type',e.target.value)}>
 <option value="backup">{t('backup')}</option>
 <option value="synchronization">{t('synchronization')}</option>
 <option value="archive">{t('archive')}</option>
 </select>
 </Field>
-<Field label={t('software')}>
+<Field label={t('software')} help={h.planSoftware}>
 <Select empty value={value.software_id||''} onChange={(v:string)=>set('software_id',v||null)} options={data.software}/>
 </Field>
-<Field label={t('timing')}>
+<Field label={t('timing')} help={h.schedule}>
 <select value={value.schedule_type} onChange={e=>set('schedule_type',e.target.value)}>
 <option value="daily">{t('daily')}</option>
 <option value="weekly">{t('weekly')}</option>
 <option value="monthly">{t('monthly')}</option>
 <option value="manual">{t('manual')}</option>
 </select>
-</Field>{value.schedule_type!=='manual'&&<Field label={t('start')}>
+</Field>{value.schedule_type!=='manual'&&<Field label={t('start')} help={h.startTime}>
 <input type="time" value={value.start_time} onChange={e=>set('start_time',e.target.value)}/>
-</Field>}{value.schedule_type==='weekly'&&<Field label={t('weekly')} wide>
+</Field>}{value.schedule_type==='weekly'&&<Field label={t('weekly')} help={h.weekdays} wide>
 <div className="weekday-picker">{[1,2,3,4,5,6,0].map(d=>
 <button type="button" className={value.weekdays.includes(d)?'active':''} onClick={()=>set('weekdays',value.weekdays.includes(d)?value.weekdays.filter((x:number)=>x!==d):[...value.weekdays,d])} key={d}>{['Su','Mo','Tu','We','Th','Fr','Sa'][d]}</button>)}</div>
-</Field>}{value.schedule_type==='monthly'&&<Field label={t('monthly')}>
+{attempted&&value.weekdays.length===0&&<p className="field-error"><TriangleAlert/>{h.selectDay}</p>}
+</Field>}{value.schedule_type==='monthly'&&<Field label={t('monthly')} help={h.schedule}>
 <input type="number" min="1" max="31" value={value.day_of_month} onChange={e=>set('day_of_month',e.target.value)}/>
-</Field>}<Field label={t('duration')}>
-<div className="input-suffix">
-<input type="number" min="1" value={value.duration_minutes} onChange={e=>set('duration_minutes',e.target.value)}/>
-<span>{t('minutes')}</span>
+</Field>}<Field label={t('duration')} help={h.duration}>
+<div className="duration-input">
+<input type="number" min={durationUnit==='hours'?'0.25':'1'} step={durationUnit==='hours'?'0.25':'1'} value={durationValue} onChange={e=>set('duration_minutes',Math.max(1,Number(e.target.value)*(durationUnit==='hours'?60:1)))}/>
+<select value={durationUnit} onChange={e=>setDurationUnit(e.target.value as 'minutes'|'hours')} aria-label={t('duration')}><option value="minutes">{t('minutes')}</option><option value="hours">{lang==='de'?'Stunden':'Hours'}</option></select>
 </div>
 </Field>
-<Field label={t('versions')}>
+<Field label={t('versions')} help={h.versions}>
 <input type="number" min="1" value={value.version_count||''} onChange={e=>set('version_count',e.target.value)}/>
 </Field>
-<Field label={t('retention')}>
+<Field label={t('retention')} help={h.retention}>
 <input type="number" min="1" value={value.retention_value||''} onChange={e=>set('retention_value',e.target.value)}/>
 </Field>
-<Field label={t('owner')}>
+<Field label={t('owner')} help={h.owner}>
 <input value={value.owner} onChange={e=>set('owner',e.target.value)}/>
 </Field>
 <Field label={t('notes')} help={h.notes} wide>
 <textarea value={value.notes} onChange={e=>set('notes',e.target.value)}/>
 </Field>
-<Field label="Options" wide>
+<Field label="Options" help={h.options} wide>
 <div className="switches">
 <label>
 <input type="checkbox" checked={value.immutable} onChange={e=>set('immutable',e.target.checked)}/>{t('immutable')}</label>
@@ -424,7 +425,7 @@ function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h
 </div>
 </Field>
 </div>
-<ModalActions t={t} close={()=>setValue(null)} save={()=>{setAttempted(true);if(value.dataset_ids.length>0)save()}}/>
+<ModalActions t={t} close={()=>setValue(null)} save={()=>{setAttempted(true);if(value.dataset_ids.length>0&&(value.schedule_type!=='weekly'||value.weekdays.length>0))save()}}/>
 </Modal>}
 
 function EntityModal({tab,value,setValue,data,t,lang,save}:any){const h=getHelp(lang);const set=(k:string,v:any)=>setValue({...value,[k]:v});return <Modal title={`${value.id?t('edit'):t('add')} · ${t(tab==='datasets'?'dataSets':tab==='software'?'softwareList':tab)}`} close={()=>setValue(null)}>
@@ -529,7 +530,7 @@ function ModalActions({t,close,save}:any){return <div className="modal-actions">
 function Field({label,help,wide,children}:any){return <label className={`field ${wide?'wide':''}`}>
 <span>{label}{help&&<Help text={help}/>}</span>{children}</label>}
 function Help({text}:{text:string}){return <span className="help-tip" tabIndex={0} aria-label={text}>
-<CircleHelp/>
+<Info/>
 <span role="tooltip">{text}</span>
 </span>}
 function Select({value,onChange,options,empty=false}:any){return <select value={value} onChange={e=>onChange(e.target.value)}>

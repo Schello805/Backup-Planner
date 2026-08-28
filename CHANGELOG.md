@@ -4,6 +4,13 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-08-28
+
+- Added selectable minute and hour units for estimated backup duration.
+- Added explanatory info tooltips to all backup-plan fields.
+- Removed the preselected Monday from new weekly plans and require an explicit weekday choice.
+- Standardized the height of adjacent form controls.
+
 ## [0.1.2] - 2026-08-28
 
 - Added bilingual explanations for every master-data category.

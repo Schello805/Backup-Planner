@@ -328,3 +328,8 @@ footer{padding:18px 14px}
 .update-check-error{color:var(--red)!important}
 button:disabled{cursor:not-allowed;opacity:.65}
 .spin{animation:spin .8s linear infinite}
+.field>input,.field>select,.field>.input-suffix,.field>.duration-input{height:42px}
+.duration-input{display:grid;grid-template-columns:minmax(0,1fr) 118px}
+.duration-input input{height:42px;border-radius:9px 0 0 9px}
+.duration-input select{height:42px;border-left:0;border-radius:0 9px 9px 0;background:var(--surface2)}
+.duration-input input:focus{position:relative;z-index:1}
