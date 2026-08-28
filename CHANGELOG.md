@@ -4,6 +4,12 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-08-28
+
+- Unified the focus styling of the compound duration control.
+- Kept modal tooltips fully visible above the dialog edge and action bar.
+- Completed visual quality assurance for the backup-plan form.
+
 ## [0.1.3] - 2026-08-28
 
 - Added selectable minute and hour units for estimated backup duration.
