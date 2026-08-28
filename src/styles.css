@@ -323,3 +323,8 @@ footer{padding:18px 14px}
 .dataset-select.invalid{border-color:var(--red);box-shadow:0 0 0 3px color-mix(in srgb,var(--red) 12%,transparent)}
 .field-error{color:var(--red);font-size:10px;margin:7px 0 0;display:flex;align-items:center;gap:5px}
 .field-error svg{width:14px}
+.update-check-ok,.update-check-error{font-weight:600;margin-top:5px!important}
+.update-check-ok{color:var(--green)!important}
+.update-check-error{color:var(--red)!important}
+button:disabled{cursor:not-allowed;opacity:.65}
+.spin{animation:spin .8s linear infinite}

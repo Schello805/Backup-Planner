@@ -279,7 +279,7 @@ function Settings({data,t,lang,theme,setLang,setTheme,reload,release,setRelease}
 }
 function entityMeta(tab:string,x:any,data:AppData,t:any){const find=(k:keyof AppData,id:string)=>(data[k]as Entity[]).find(y=>y.id===id)?.name||'';if(tab==='locations')return `${x.type}${x.parent_id?' · '+find('locations',x.parent_id):''}`;if(tab==='sources')return `${x.device_type}${x.location_id?' · '+find('locations',x.location_id):''}`;if(tab==='targets')return `${x.storage_type}${x.location_id?' · '+find('locations',x.location_id):''}`;if(tab==='datasets')return `${t(x.priority)} · ${find('sources',x.source_id)}`;return x.notes||'—'}
 
-function SystemSettings({t,lang,theme,setLang,setTheme,backups,loadBackups,release,setRelease,reload}:any){return <>
+function SystemSettings({t,lang,theme,setLang,setTheme,backups,loadBackups,release,setRelease,reload}:any){const[checking,setChecking]=useState(false);const[checkedAt,setCheckedAt]=useState<Date|null>(null);const[checkError,setCheckError]=useState(false);const checkUpdates=async()=>{setChecking(true);setCheckError(false);try{const result=await api('/release?force=1');setRelease(result);setCheckError(!!result.unavailable);setCheckedAt(new Date())}catch{setCheckError(true);setCheckedAt(new Date())}finally{setChecking(false)}};return <>
 <div className="system-grid">
 <article>
 <Languages/>
@@ -342,9 +342,11 @@ function SystemSettings({t,lang,theme,setLang,setTheme,backups,loadBackups,relea
 <Github/>
 <div>
 <b>{release?.available?`${t('updateAvailable')}: v${release.latest}`:t('upToDate')}</b>
-<span>{t('updateCli')}</span>{release?.available&&<code>sudo /opt/backup-planner/scripts/update.sh</code>}</div>
-<button className="secondary" onClick={()=>api('/release?force=1').then(setRelease)}>
-<RefreshCw/>{t('checkUpdates')}</button>
+<span>{t('updateCli')}</span>
+{checkedAt&&<span className={checkError?'update-check-error':'update-check-ok'}>{checkError?(lang==='de'?'GitHub ist momentan nicht erreichbar.':'GitHub is currently unavailable.'):(lang==='de'?`Zuletzt geprüft: ${checkedAt.toLocaleTimeString('de-DE')}`:`Last checked: ${checkedAt.toLocaleTimeString('en-US')}`)}</span>}
+{release?.available&&<code>sudo /opt/backup-planner/scripts/update.sh</code>}</div>
+<button className="secondary" onClick={checkUpdates} disabled={checking}>
+<RefreshCw className={checking?'spin':''}/>{checking?(lang==='de'?'Prüfe…':'Checking…'):t('checkUpdates')}</button>
 </div>
 </>}
 

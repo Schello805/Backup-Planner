@@ -9,6 +9,8 @@ All notable changes are documented here. This project follows Semantic Versionin
 - Added bilingual explanations for every master-data category.
 - Added accessible field tooltips that work with mouse, keyboard, and touch layouts.
 - Clarified dataset selection in backup plans with guidance, empty states, and required-field validation.
+- Added visible progress, timestamps, and error feedback to manual update checks.
+- Made CLI updates reuse installed packages when dependencies are unchanged and exit immediately when already current.
 
 ## [0.1.1] - 2026-08-27
 
