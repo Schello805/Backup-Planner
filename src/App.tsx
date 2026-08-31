@@ -1,5 +1,5 @@
 import{useEffect,useState}from'react';
-import{Activity,Archive,CalendarDays,ChevronRight,CircleHelp,Database,Download,Edit3,FolderArchive,Github,HardDrive,Info,Languages,LayoutDashboard,MapPin,Moon,Plus,RefreshCw,Search,Server,Settings as SettingsIcon,ShieldCheck,Sun,Trash2,TriangleAlert,X}from'lucide-react';
+import{Activity,Archive,CalendarDays,ChevronDown,ChevronRight,CircleHelp,Database,Download,Edit3,FolderArchive,Github,HardDrive,Info,Languages,LayoutDashboard,MapPin,Moon,Plus,RefreshCw,Search,Server,Settings as SettingsIcon,ShieldCheck,Sun,Trash2,TriangleAlert,X}from'lucide-react';
 import{addDays,addMonths,eachDayOfInterval,endOfMonth,format,startOfMonth,startOfWeek}from'date-fns';import{de,enUS}from'date-fns/locale';
 import{api}from'./api';import{useCopy,type Lang}from'./i18n';import type{AppData,Entity,Plan}from'./types';
 import{getHelp}from'./help';
@@ -260,7 +260,7 @@ function Settings({data,t,lang,theme,setLang,setTheme,reload,release,setRelease}
 <p>{(h as any)[tab].body}</p>
 </div>
 </div>
-<div className="master-list">{data[tab].map((x:Entity)=>
+{tab==='locations'?<LocationTree locations={data.locations} t={t} lang={lang} edit={setEditing} remove={remove}/>:<div className="master-list">{data[tab].map((x:Entity)=>
 <article key={x.id} className={!x.active?'inactive':''} style={tab==='targets'?{borderLeft:`4px solid ${x.color||'#3478f6'}`,paddingLeft:'10px'}:undefined}>
 <span className="master-icon">{tab==='locations'?<MapPin/>:tab==='sources'?<Server/>:tab==='targets'?<HardDrive/>:tab==='datasets'?<Database/>:<Archive/>}</span>
 <div>
@@ -276,9 +276,10 @@ function Settings({data,t,lang,theme,setLang,setTheme,reload,release,setRelease}
 <Trash2/>
 </button>
 </div>
-</article>)}</div>
+</article>)}</div>}
 </>:<SystemSettings {...{t,lang,theme,setLang,setTheme,backups,loadBackups,release,setRelease,reload}}/>}</section>{editing&&<EntityModal tab={tab} value={editing} setValue={setEditing} data={data} t={t} lang={lang} save={save}/>}</div>
 }
+function LocationTree({locations,t,lang,edit,remove}:{locations:Entity[];t:any;lang:Lang;edit:(value:any)=>void;remove:(id:string)=>void}){const[collapsed,setCollapsed]=useState<Set<string>>(()=>new Set());const ids=new Set(locations.map(x=>x.id));const children=new Map<string,Entity[]>();for(const location of locations){const parent=location.parent_id&&ids.has(location.parent_id)?location.parent_id:'root';children.set(parent,[...(children.get(parent)||[]),location])}for(const rows of children.values())rows.sort((a,b)=>a.name.localeCompare(b.name,lang));const toggle=(id:string)=>setCollapsed(current=>{const next=new Set(current);if(next.has(id))next.delete(id);else next.add(id);return next});const render=(parentId:string,depth:number,trail:Set<string>):any[]=>{return(children.get(parentId)||[]).flatMap(location=>{if(trail.has(location.id))return[];const hasChildren=(children.get(location.id)||[]).length>0;const isCollapsed=collapsed.has(location.id);const row=<article className={`tree-row ${depth===0?'root ':''}${!location.active?'inactive':''}`} style={{'--depth':depth} as any} key={location.id}><button className={`tree-toggle ${hasChildren?'':'empty'}`} onClick={()=>{if(hasChildren)toggle(location.id)}} aria-expanded={hasChildren?!isCollapsed:undefined} title={hasChildren?(isCollapsed?(lang==='de'?'Unterpunkte anzeigen':'Show children'):(lang==='de'?'Unterpunkte ausblenden':'Hide children')):undefined}>{hasChildren?(isCollapsed?<ChevronRight/>:<ChevronDown/>):<span/>}</button><span className="master-icon"><MapPin/></span><div><b>{location.name}</b><small>{location.type}</small></div><span className={`status ${location.active?'on':'off'}`}>{location.active?t('active'):t('deactivate')}</span><div className="row-actions"><button onClick={()=>edit({...location,active:!!location.active})}><Edit3/></button><button onClick={()=>remove(location.id)}><Trash2/></button></div></article>;return[row,...(!hasChildren||isCollapsed?[]:render(location.id,depth+1,new Set([...trail,location.id])))]})};return <div className="master-list location-tree">{render('root',0,new Set())}</div>}
 function entityMeta(tab:string,x:any,data:AppData,t:any){const find=(k:keyof AppData,id:string)=>(data[k]as Entity[]).find(y=>y.id===id)?.name||'';if(tab==='locations')return `${x.type}${x.parent_id?' · '+find('locations',x.parent_id):''}`;if(tab==='sources')return `${x.device_type}${x.location_id?' · '+find('locations',x.location_id):''}`;if(tab==='targets')return `${x.storage_type}${x.location_id?' · '+find('locations',x.location_id):''}`;if(tab==='datasets')return `${t(x.priority)} · ${find('sources',x.source_id)}`;return x.notes||'—'}
 
 function SystemSettings({t,lang,theme,setLang,setTheme,backups,loadBackups,release,setRelease,reload}:any){const[checking,setChecking]=useState(false);const[checkedAt,setCheckedAt]=useState<Date|null>(null);const[checkError,setCheckError]=useState(false);const checkUpdates=async()=>{setChecking(true);setCheckError(false);try{const result=await api('/release?force=1');setRelease(result);setCheckError(!!result.unavailable);setCheckedAt(new Date())}catch{setCheckError(true);setCheckedAt(new Date())}finally{setChecking(false)}};return <>

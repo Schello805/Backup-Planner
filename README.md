@@ -11,6 +11,7 @@ Backup Planner is a self-hosted web application for planning, visualizing, and i
 - hierarchical sites, buildings, rooms, and cloud locations
 - week Gantt, three-month timeline, and agenda
 - full master-data management for sources, targets, datasets, locations, and software
+- expandable location hierarchy for sites, buildings, and rooms
 - English and German interface, light and dark themes
 - portable JSON import/export and ten rotating server backups
 - update checks on page load; installation remains CLI-only

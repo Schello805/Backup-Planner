@@ -4,6 +4,13 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.7] - 2026-08-31
+
+- Replaced the flat location list with an expandable hierarchy tree.
+- Added indentation and connector lines for countries, sites, buildings, and rooms.
+- Preserved status, edit, and delete controls on every tree row.
+- Added responsive tree spacing for smaller screens.
+
 ## [0.1.6] - 2026-08-31
 
 - Added user-defined colors to backup targets with an automatic database migration.
