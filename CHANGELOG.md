@@ -4,6 +4,13 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.10] - 2026-08-31
+
+- Rebuilt the mobile location-tree row layout so controls stay on one line.
+- Fixed a CSS class collision that gave leaf-node toggles a 220-pixel empty-state height.
+- Reduced mobile indentation and button sizes while preserving touch usability.
+- Added name truncation for deeply nested locations and completed smartphone visual verification.
+
 ## [0.1.9] - 2026-08-31
 
 - Fixed oversized gaps between nested rows in the location tree.

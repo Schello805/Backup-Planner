@@ -166,7 +166,7 @@ td{padding:15px 18px;border-top:1px solid var(--border)}
 .location-tree .tree-row:before{content:"";position:absolute;left:calc(17px + var(--depth)*28px);top:0;bottom:0;border-left:1px solid var(--border)}
 .location-tree .tree-row:after{content:"";position:absolute;left:calc(17px + var(--depth)*28px);top:50%;width:14px;border-top:1px solid var(--border)}
 .location-tree .tree-row.root:before,.location-tree .tree-row.root:after{display:none}
-.tree-toggle{position:relative;z-index:1;width:26px;height:26px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--muted);display:grid;place-items:center;padding:0}.tree-toggle:hover{color:var(--blue);border-color:var(--blue)}.tree-toggle svg{width:15px}.tree-toggle.empty{border-color:transparent;background:transparent;pointer-events:none}
+.tree-toggle{position:relative;z-index:1;width:26px;height:26px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--muted);display:grid;place-items:center;padding:0}.tree-toggle:hover{color:var(--blue);border-color:var(--blue)}.tree-toggle svg{width:15px}.tree-toggle.leaf{border-color:transparent;background:transparent;pointer-events:none}
 .master-list article.inactive{opacity:.55}
 .master-icon{width:38px;height:38px;background:var(--surface2);border-radius:9px;display:grid;place-items:center;color:var(--blue)}
 .master-icon svg{width:17px}
@@ -279,10 +279,10 @@ footer{padding:18px 14px}
 .section-head{padding:17px}
 .master-list{padding:7px 12px}
 .master-list article{grid-template-columns:38px 1fr auto}
-.location-tree .tree-row{grid-template-columns:26px 38px 1fr auto;padding-left:calc(0px + var(--depth)*18px);gap:8px}.location-tree .tree-row:before{left:calc(13px + var(--depth)*18px)}.location-tree .tree-row:after{left:calc(13px + var(--depth)*18px);width:10px}
+.location-tree .tree-row{grid-template-columns:24px 34px minmax(0,1fr) auto;height:60px;min-height:60px;max-height:60px;padding-left:calc(var(--depth)*12px);gap:7px}.location-tree .tree-row:before{left:calc(12px + var(--depth)*12px)}.location-tree .tree-row:after{left:calc(12px + var(--depth)*12px);width:9px}.location-tree .master-icon{width:34px;height:34px}.location-tree .tree-toggle{width:24px;height:24px}.location-tree .tree-row>div:not(.row-actions){min-width:0}.location-tree .tree-row>div:not(.row-actions) b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .master-list .status{display:none}
 .master-list .row-actions{grid-column:2/-1}
-.location-tree .row-actions{grid-column:3/-1}
+.location-tree .row-actions{grid-column:4;grid-row:1;flex-wrap:nowrap;justify-content:flex-end;gap:3px}.location-tree .row-actions button{width:30px;height:30px}
 .system-grid{padding:12px}
 .system-grid>article{align-items:flex-start;flex-wrap:wrap}
 .backup-head,.backup-list{padding:15px 12px}
