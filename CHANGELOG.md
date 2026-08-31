@@ -4,6 +4,13 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.6] - 2026-08-31
+
+- Added user-defined colors to backup targets with an automatic database migration.
+- Added target color markers to Settings and the backup-plan overview.
+- Added a dashboard distribution that counts and ranks active plans by destination.
+- Added bilingual guidance explaining how target colors are used.
+
 ## [0.1.5] - 2026-08-31
 
 - Added automatic dataset propagation through multi-stage backup and synchronization chains.

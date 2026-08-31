@@ -6,7 +6,7 @@ import{getHelp}from'./help';
 
 type View='dashboard'|'plans'|'schedule'|'settings';
 const blankPlan={name:'',source_id:'',source_target_id:null,target_id:'',software_id:null,dataset_ids:[],protection_type:'backup',schedule_type:'weekly',weekdays:[],day_of_month:1,start_time:'03:00',duration_minutes:30,retention_value:null,retention_unit:'days',version_count:null,immutable:false,encrypted:false,owner:'',color:'#3478f6',notes:'',active:true};
-const entityDefaults:Record<string,any>={locations:{name:'',type:'site',parent_id:null,notes:'',active:true},sources:{name:'',location_id:null,device_type:'computer',notes:'',active:true},targets:{name:'',location_id:null,storage_type:'nas',provider:'',immutable_capable:false,encrypted_default:false,notes:'',active:true},datasets:{name:'',source_id:'',priority:'normal',notes:'',active:true},software:{name:'',notes:'',active:true}};
+const entityDefaults:Record<string,any>={locations:{name:'',type:'site',parent_id:null,notes:'',active:true},sources:{name:'',location_id:null,device_type:'computer',notes:'',active:true},targets:{name:'',location_id:null,storage_type:'nas',provider:'',color:'#3478f6',immutable_capable:false,encrypted_default:false,notes:'',active:true},datasets:{name:'',source_id:'',priority:'normal',notes:'',active:true},software:{name:'',notes:'',active:true}};
 const iconByView={dashboard:LayoutDashboard,plans:Database,schedule:CalendarDays,settings:SettingsIcon};
 
 export default function App(){
@@ -101,6 +101,7 @@ function Dashboard({data,t,onStart}:{data:AppData;t:any;onStart:()=>void}){const
 <Stat icon={<HardDrive/>} value={a.counts.datasets} label={t('datasets')}/>
 <Stat icon={<TriangleAlert/>} value={a.counts.issues} label={t('issues')} tone={a.counts.issues?'orange':'green'}/>
 </section>
+<DestinationOverview data={data} t={t}/>
 <section className="section-card">
 <div className="section-head">
 <div>
@@ -125,6 +126,7 @@ function Dashboard({data,t,onStart}:{data:AppData;t:any;onStart:()=>void}){const
 </li>)}</ul>
 </article>)}</div>}</section>
 </>}
+function DestinationOverview({data,t}:{data:AppData;t:any}){const destinations=data.targets.map(target=>({target,count:data.plans.filter(plan=>plan.active&&!plan.deleted_at&&plan.target_id===target.id).length})).filter(item=>item.count>0).sort((a,b)=>b.count-a.count);const total=destinations.reduce((sum,item)=>sum+item.count,0);if(!total)return null;return <section className="section-card destination-overview"><div className="section-head"><div><span className="eyebrow">{t('targetDistribution')}</span><h2>{t('whereBackupsEnd')}</h2></div><b>{total}</b></div><div className="destination-bars">{destinations.map(({target,count})=><div className="destination-row" key={target.id}><span className="target-color" style={{background:target.color||'#3478f6'}}/><b>{target.name}</b><div className="destination-track"><i style={{width:`${count/total*100}%`,background:target.color||'#3478f6'}}/></div><strong>{count}</strong></div>)}</div></section>}
 function summary(a:AppData['analysis'],t:any){const weak=a.datasets.filter(d=>d.score<70);return weak.length?`${a.datasets.length-weak.length} ${t('datasets').toLowerCase()} ${t('well').toLowerCase()}. ${weak.slice(0,2).map(d=>d.name).join(', ')} ${t('issues').toLowerCase()}.`:`${t('well')}. 3-2-1 is implemented for your active datasets.`}
 function Stat({icon,value,label,tone='blue'}:any){return <article className="stat">
 <span className={`stat-icon ${tone}`}>{icon}</span>
@@ -170,7 +172,7 @@ function Plans({data,t,edit,remove}:any){const[q,setQ]=useState('');const[type,s
 </div>
 </td>
 <td>{sourceName(p)}{p.source_target_id&&<small className="derived-label">{t('derivedCopy')}</small>}</td>
-<td>{names('targets',p.target_id)}</td>
+<td><span className="target-name"><i style={{background:data.targets.find((x:Entity)=>x.id===p.target_id)?.color||'#3478f6'}}/>{names('targets',p.target_id)}</span></td>
 <td>
 <span className={`badge ${p.protection_type}`}>{t(p.protection_type)}</span>
 </td>
@@ -259,7 +261,7 @@ function Settings({data,t,lang,theme,setLang,setTheme,reload,release,setRelease}
 </div>
 </div>
 <div className="master-list">{data[tab].map((x:Entity)=>
-<article key={x.id} className={!x.active?'inactive':''}>
+<article key={x.id} className={!x.active?'inactive':''} style={tab==='targets'?{borderLeft:`4px solid ${x.color||'#3478f6'}`,paddingLeft:'10px'}:undefined}>
 <span className="master-icon">{tab==='locations'?<MapPin/>:tab==='sources'?<Server/>:tab==='targets'?<HardDrive/>:tab==='datasets'?<Database/>:<Archive/>}</span>
 <div>
 <b>{x.name}</b>
@@ -476,6 +478,9 @@ function EntityModal({tab,value,setValue,data,t,lang,save}:any){const h=getHelp(
 </Field>
 <Field label={t('provider')} help={h.provider} wide>
 <input value={value.provider} onChange={e=>set('provider',e.target.value)}/>
+</Field>
+<Field label={t('color')} help={h.targetColor}>
+<div className="color-field"><input type="color" value={value.color||'#3478f6'} onChange={e=>set('color',e.target.value)}/><code>{value.color||'#3478f6'}</code></div>
 </Field>
 <Field label="Options" wide>
 <div className="switches">
