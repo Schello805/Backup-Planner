@@ -1,19 +1,21 @@
-import{useEffect,useState}from'react';
-import{Activity,Archive,CalendarDays,ChevronDown,ChevronRight,CircleHelp,Database,Download,Edit3,FolderArchive,Github,HardDrive,Info,Languages,LayoutDashboard,MapPin,Moon,Plus,RefreshCw,Search,Server,Settings as SettingsIcon,ShieldCheck,Sun,Trash2,TriangleAlert,X}from'lucide-react';
+/* eslint-disable react-hooks/exhaustive-deps -- plan-name suggestion intentionally reacts only to its derived value */
+import{useEffect,useRef,useState}from'react';
+import{Activity,Archive,CalendarDays,Check,ChevronDown,ChevronRight,CircleHelp,Database,Download,Edit3,FolderArchive,Github,HardDrive,Info,Languages,LayoutDashboard,MapPin,Moon,Plus,RefreshCw,Search,Server,Settings as SettingsIcon,ShieldCheck,Sun,Trash2,TriangleAlert,X}from'lucide-react';
 import{addDays,addMonths,eachDayOfInterval,endOfMonth,format,isSameDay,startOfMonth,startOfWeek}from'date-fns';import{de,enUS}from'date-fns/locale';
 import{api}from'./api';import{useCopy,type Lang}from'./i18n';import type{AppData,Entity,Plan}from'./types';
 import{getHelp}from'./help';
 
 type View='dashboard'|'plans'|'schedule'|'settings';
-const blankPlan={name:'',source_id:'',source_target_id:null,target_id:'',software_id:null,dataset_ids:[],protection_type:'backup',schedule_type:'weekly',weekdays:[],day_of_month:1,start_time:'03:00',duration_minutes:30,retention_value:null,retention_unit:'days',version_count:null,immutable:false,encrypted:false,owner:'',color:'#3478f6',notes:'',active:true};
+const blankPlan={name:'',source_id:'',source_target_id:null,target_id:'',software_id:null,dataset_ids:[],protection_type:'backup',schedule_type:'weekly',weekdays:[],day_of_month:1,start_time:'03:00',duration_minutes:30,retention_value:null,retention_unit:'days',version_count:null,immutable:false,encrypted:false,owner:'',color:'#16a36a',notes:'',active:true};
 const entityDefaults:Record<string,any>={locations:{name:'',type:'site',parent_id:null,notes:'',active:true},sources:{name:'',location_id:null,device_type:'computer',notes:'',active:true},targets:{name:'',location_id:null,storage_type:'nas',provider:'',color:'#3478f6',immutable_capable:false,encrypted_default:false,notes:'',active:true},datasets:{name:'',source_id:'',priority:'normal',notes:'',active:true},software:{name:'',notes:'',active:true}};
 const iconByView={dashboard:LayoutDashboard,plans:Database,schedule:CalendarDays,settings:SettingsIcon};
 
 export default function App(){
- const[lang,setLang]=useState<Lang>(()=>(localStorage.getItem('language')as Lang)||'en');const[theme,setTheme]=useState(()=>localStorage.getItem('theme')||'light');const[view,setView]=useState<View>('dashboard');const[data,setData]=useState<AppData|null>(null);const[loading,setLoading]=useState(true);const[error,setError]=useState('');const[plan,setPlan]=useState<any|null>(null);const[release,setRelease]=useState<any>(null);const t=useCopy(lang);
+ const[lang,setLang]=useState<Lang>(()=>(localStorage.getItem('language')as Lang)||'en');const[theme,setTheme]=useState(()=>localStorage.getItem('theme')||'light');const[view,setView]=useState<View>('dashboard');const[data,setData]=useState<AppData|null>(null);const[loading,setLoading]=useState(true);const[error,setError]=useState('');const[plan,setPlan]=useState<any|null>(null);const[release,setRelease]=useState<any>(null);const[toasts,setToasts]=useState<Array<{id:number;text:string;tone:'success'|'error'}>>([]);const t=useCopy(lang);
+ const notify=(text:string,tone:'success'|'error'='success')=>{const id=Date.now()+Math.random();setToasts(current=>[...current.slice(-2),{id,text,tone}]);window.setTimeout(()=>setToasts(current=>current.filter(item=>item.id!==id)),3200)};
  const load=async()=>{try{setError('');setData(await api('/data'))}catch(e:any){setError(e.message)}finally{setLoading(false)}};
- useEffect(()=>{document.documentElement.dataset.theme=theme;localStorage.setItem('theme',theme)},[theme]);useEffect(()=>{localStorage.setItem('language',lang);document.documentElement.lang=lang},[lang]);useEffect(()=>{load();api('/release').then(setRelease).catch(()=>{})},[]);
- const savePlan=async()=>{try{await api(`/plans${plan.id?'/'+plan.id:''}`,{method:plan.id?'PUT':'POST',body:JSON.stringify({...plan,duration_minutes:Number(plan.duration_minutes),day_of_month:plan.day_of_month?Number(plan.day_of_month):null,version_count:plan.version_count?Number(plan.version_count):null,retention_value:plan.retention_value?Number(plan.retention_value):null})});setPlan(null);await load()}catch(e:any){setError(e.message)}};
+ useEffect(()=>{document.documentElement.dataset.theme=theme;localStorage.setItem('theme',theme)},[theme]);useEffect(()=>{localStorage.setItem('language',lang);document.documentElement.lang=lang},[lang]);useEffect(()=>{load();api('/release').then(setRelease).catch(()=>{})},[]);useEffect(()=>{const listener=()=>notify(lang==='de'?'Systemaktion erfolgreich abgeschlossen':'System action completed');window.addEventListener('backup-planner:system-action',listener);return()=>window.removeEventListener('backup-planner:system-action',listener)},[lang]);
+ const savePlan=async()=>{try{const editing=!!plan.id;await api(`/plans${plan.id?'/'+plan.id:''}`,{method:plan.id?'PUT':'POST',body:JSON.stringify({...plan,duration_minutes:Number(plan.duration_minutes),day_of_month:plan.day_of_month?Number(plan.day_of_month):null,version_count:plan.version_count?Number(plan.version_count):null,retention_value:plan.retention_value?Number(plan.retention_value):null})});setPlan(null);await load();notify(editing?t('planUpdated'):t('planCreated'))}catch(e:any){setError(e.message);notify(t('actionFailed'),'error')}};
  const nav=(next:View)=>{setView(next);if(next==='settings')setPlan(null)};
  if(loading)return <div className="splash">
 <img src="/logo.png"/>
@@ -60,7 +62,7 @@ export default function App(){
 <X/>
 </button>
 </div>}
-   <div className="page">{view==='dashboard'&&data&&<Dashboard data={data} t={t} onStart={()=>nav('settings')}/>} {view==='plans'&&data&&<Plans data={data} t={t} edit={(p:Plan)=>setPlan({...p,immutable:!!p.immutable,encrypted:!!p.encrypted,active:!!p.active})} remove={async (p:Plan)=>{if(confirm(t('delete')+'?')){await api(`/plans/${p.id}`,{method:'DELETE'});load()}}}/>} {view==='schedule'&&data&&<Schedule data={data} t={t} lang={lang}/>} {view==='settings'&&data&&<Settings data={data} t={t} lang={lang} theme={theme} setLang={setLang} setTheme={setTheme} reload={load} release={release} setRelease={setRelease}/>}</div>
+   <div className="page">{view==='dashboard'&&data&&<Dashboard data={data} t={t} onStart={()=>nav('settings')}/>} {view==='plans'&&data&&<Plans data={data} t={t} edit={(p:Plan)=>setPlan({...p,immutable:!!p.immutable,encrypted:!!p.encrypted,active:!!p.active})} remove={async (p:Plan)=>{if(confirm(t('delete')+'?')){await api(`/plans/${p.id}`,{method:'DELETE'});await load();notify(t('movedToTrash'))}}}/>} {view==='schedule'&&data&&<Schedule data={data} t={t} lang={lang}/>} {view==='settings'&&data&&<Settings data={data} t={t} lang={lang} theme={theme} setLang={setLang} setTheme={setTheme} reload={load} release={release} setRelease={setRelease} notify={notify}/>}</div>
    <footer>
 <span>Backup Planner · v{data?.meta.version}</span>
 <span>·</span>
@@ -73,6 +75,7 @@ export default function App(){
 <span>{t(v)}</span>
 </button>})}</div>
   {plan&&data&&<PlanModal lang={lang} value={plan} onOpenSettings={()=>{setPlan(null);nav('settings')}} setValue={setPlan} data={data} t={t} save={savePlan}/>} 
+  <div className="toast-stack" aria-live="polite">{toasts.map(item=><div className={`toast ${item.tone}`} key={item.id}>{item.tone==='success'?<Check/>:<TriangleAlert/>}<span>{item.text}</span><button onClick={()=>setToasts(current=>current.filter(x=>x.id!==item.id))}><X/></button></div>)}</div>
  </div>;
 }
 
@@ -101,6 +104,7 @@ function Dashboard({data,t,onStart}:{data:AppData;t:any;onStart:()=>void}){const
 <Stat icon={<HardDrive/>} value={a.counts.datasets} label={t('datasets')}/>
 <Stat icon={<TriangleAlert/>} value={a.counts.issues} label={t('issues')} tone={a.counts.issues?'orange':'green'}/>
 </section>
+<BackupChains data={data} t={t}/>
 <DestinationOverview data={data} t={t}/>
 <section className="section-card">
 <div className="section-head">
@@ -126,6 +130,7 @@ function Dashboard({data,t,onStart}:{data:AppData;t:any;onStart:()=>void}){const
 </li>)}</ul>
 </article>)}</div>}</section>
 </>}
+function BackupChains({data,t}:{data:AppData;t:any}){const active=data.plans.filter(p=>p.active&&!p.deleted_at);if(!active.length)return null;const entityName=(items:Entity[],id?:string|null)=>items.find(x=>x.id===id)?.name||'—';const chains=data.datasets.map(dataset=>{const related=active.filter(p=>p.dataset_ids.includes(dataset.id));if(!related.length)return null;const first=related.find(p=>!p.source_target_id)||related[0];const nodes=[{id:`source:${first.source_id}`,name:entityName(data.sources,first.source_id),kind:'source'}];let current=first;const used=new Set<string>();while(current&&!used.has(current.id)){used.add(current.id);nodes.push({id:`target:${current.target_id}`,name:entityName(data.targets,current.target_id),kind:current.protection_type});current=related.find(p=>p.source_target_id===current.target_id)as Plan}return{dataset,nodes}}).filter(Boolean)as Array<{dataset:Entity;nodes:Array<{id:string;name:string;kind:string}>}>;if(!chains.length)return null;return <section className="section-card chain-overview"><div className="section-head"><div><span className="eyebrow">{t('protectionPaths')}</span><h2>{t('whereDataTravels')}</h2></div><div className="chain-legend"><span className="backup">{t('backup')}</span><span className="synchronization">{t('synchronization')}</span><span className="archive">{t('archive')}</span></div></div><div className="chain-list">{chains.slice(0,6).map(({dataset,nodes})=><article key={dataset.id}><div className="chain-dataset"><Database/><div><b>{dataset.name}</b><small>{t(dataset.priority)}</small></div></div><div className="chain-path">{nodes.map((node,index)=><div className="chain-node-wrap" key={node.id}>{index>0&&<span className={`chain-arrow ${node.kind}`}><ChevronRight/></span>}<span className={`chain-node ${node.kind}`}><i/>{node.name}</span></div>)}</div></article>)}</div></section>}
 function DestinationOverview({data,t}:{data:AppData;t:any}){const destinations=data.targets.map(target=>({target,count:data.plans.filter(plan=>plan.active&&!plan.deleted_at&&plan.target_id===target.id).length})).filter(item=>item.count>0).sort((a,b)=>b.count-a.count);const total=destinations.reduce((sum,item)=>sum+item.count,0);if(!total)return null;return <section className="section-card destination-overview"><div className="section-head"><div><span className="eyebrow">{t('targetDistribution')}</span><h2>{t('whereBackupsEnd')}</h2></div><div className="destination-total"><b>{total}</b><small>{t('activePlans')}</small></div></div><div className="destination-bars">{destinations.map(({target,count})=><div className="destination-row" key={target.id}><span className="target-color" style={{background:target.color||'#3478f6'}}/><b>{target.name}</b><div className="destination-track"><i style={{width:`${count/total*100}%`,background:target.color||'#3478f6'}}/></div><strong><b>{count}</b><small>{Math.round(count/total*100)}%</small></strong></div>)}</div></section>}
 function summary(a:AppData['analysis'],t:any){const weak=a.datasets.filter(d=>d.score<70);return weak.length?`${a.datasets.length-weak.length} ${t('datasets').toLowerCase()} ${t('well').toLowerCase()}. ${weak.slice(0,2).map(d=>d.name).join(', ')} ${t('issues').toLowerCase()}.`:`${t('well')}. 3-2-1 is implemented for your active datasets.`}
 function Stat({icon,value,label,tone='blue'}:any){return <article className="stat">
@@ -162,7 +167,7 @@ function Plans({data,t,edit,remove}:any){const[q,setQ]=useState('');const[type,s
 </thead>
 <tbody>{list.map((p:Plan)=>
 <tr key={p.id}>
-<td>
+<td data-label={t('name')}>
 <div className="plan-name">
 <i style={{background:p.color}}/>
 <div>
@@ -171,13 +176,13 @@ function Plans({data,t,edit,remove}:any){const[q,setQ]=useState('');const[type,s
 </div>
 </div>
 </td>
-<td>{sourceName(p)}{p.source_target_id&&<small className="derived-label">{t('derivedCopy')}</small>}</td>
-<td><span className="target-name"><i style={{background:data.targets.find((x:Entity)=>x.id===p.target_id)?.color||'#3478f6'}}/>{names('targets',p.target_id)}</span></td>
-<td>
+<td data-label={t('source')}>{sourceName(p)}{p.source_target_id&&<small className="derived-label">{t('derivedCopy')}</small>}</td>
+<td data-label={t('target')}><span className="target-name"><i style={{background:data.targets.find((x:Entity)=>x.id===p.target_id)?.color||'#3478f6'}}/>{names('targets',p.target_id)}</span></td>
+<td data-label={t('type')}>
 <span className={`badge ${p.protection_type}`}>{t(p.protection_type)}</span>
 </td>
-<td>{scheduleLabel(p,t)}</td>
-<td>
+<td data-label={t('timing')}>{scheduleLabel(p,t)}</td>
+<td data-label={t('actions')}>
 <div className="row-actions">
 <button onClick={()=>edit(p)} title={t('edit')}>
 <Edit3/>
@@ -234,14 +239,14 @@ function MonthGantt({date,data}:any){const start=startOfMonth(date),end=endOfMon
 <span className={[0,6].includes(d.getDay())?'weekend':''} key={d.toISOString()}>{matchesDay(p,d)&&<i style={{background:p.color}}/>}</span>)}</div>)}</div>}
 function matchesDay(p:Plan,d:Date){if(p.schedule_type==='daily')return true;if(p.schedule_type==='weekly')return p.weekdays.includes(d.getDay());if(p.schedule_type==='monthly')return p.day_of_month===d.getDate();return false}function timeMins(x:string){const[h,m]=x.split(':').map(Number);return h*60+m}function isPlanRunning(p:Plan,day:Date,now:Date){if(!isSameDay(day,now)||!matchesDay(p,day))return false;const minute=now.getHours()*60+now.getMinutes(),start=timeMins(p.start_time);return minute>=start&&minute<start+p.duration_minutes}
 
-function Settings({data,t,lang,theme,setLang,setTheme,reload,release,setRelease}:any){
+function Settings({data,t,lang,theme,setLang,setTheme,reload,release,setRelease,notify}:any){
  const[tab,setTab]=useState('locations');const[editing,setEditing]=useState<any>(null);const[backups,setBackups]=useState<any>({files:[],folder:''});const h=getHelp(lang);const loadBackups=()=>api('/backups').then(setBackups);useEffect(()=>{loadBackups()},[]);const groups=[['locations',MapPin],['sources',Server],['targets',HardDrive],['datasets',Database],['software',Archive]];
- const save=async()=>{await api(`/${tab}${editing.id?'/'+editing.id:''}`,{method:editing.id?'PUT':'POST',body:JSON.stringify(editing)});setEditing(null);reload()};const remove=async(id:string)=>{if(confirm(t('deactivate')+'?')){await api(`/${tab}/${id}`,{method:'DELETE'});reload()}};
+ const save=async()=>{const wasEditing=!!editing.id;await api(`/${tab}${editing.id?'/'+editing.id:''}`,{method:editing.id?'PUT':'POST',body:JSON.stringify(editing)});setEditing(null);await reload();notify(wasEditing?t('entryUpdated'):t('entryCreated'))};const remove=async(id:string)=>{if(confirm(t('deactivate')+'?')){await api(`/${tab}/${id}`,{method:'DELETE'});await reload();notify(t('entryDeactivated'))}};
  return <div className="settings-layout">
 <aside className="settings-nav">
 <b>{t('masterData')}</b>{groups.map(([key,Icon]:any)=>
 <button className={tab===key?'active':''} onClick={()=>{setTab(key);setEditing(null)}} key={key}>
-<Icon/>{t(key==='datasets'?'dataSets':key==='software'?'softwareList':key)}</button>)}<b>{t('system')}</b>
+<Icon/><span>{t(key==='datasets'?'dataSets':key==='software'?'softwareList':key)}</span><em>{data[key].filter((x:Entity)=>x.active).length}</em></button>)}<b>{t('system')}</b>
 <button className={tab==='system'?'active':''} onClick={()=>{setTab('system');setEditing(null)}}>
 <SettingsIcon/>{t('system')}</button>
 </aside>
@@ -277,7 +282,7 @@ function Settings({data,t,lang,theme,setLang,setTheme,reload,release,setRelease}
 </button>
 </div>
 </article>)}</div>}
-</>:<SystemSettings {...{t,lang,theme,setLang,setTheme,backups,loadBackups,release,setRelease,reload}}/>}</section>{editing&&<EntityModal tab={tab} value={editing} setValue={setEditing} data={data} t={t} lang={lang} save={save}/>}</div>
+</>:<SystemSettings {...{t,lang,theme,setLang,setTheme,backups,loadBackups,release,setRelease,reload,notify}}/>}</section>{editing&&<EntityModal tab={tab} value={editing} setValue={setEditing} data={data} t={t} lang={lang} save={save}/>}</div>
 }
 function LocationTree({locations,t,lang,edit,remove}:{locations:Entity[];t:any;lang:Lang;edit:(value:any)=>void;remove:(id:string)=>void}){const[collapsed,setCollapsed]=useState<Set<string>>(()=>new Set());const ids=new Set(locations.map(x=>x.id));const children=new Map<string,Entity[]>();for(const location of locations){const parent=location.parent_id&&ids.has(location.parent_id)?location.parent_id:'root';children.set(parent,[...(children.get(parent)||[]),location])}for(const rows of children.values())rows.sort((a,b)=>a.name.localeCompare(b.name,lang));const toggle=(id:string)=>setCollapsed(current=>{const next=new Set(current);if(next.has(id))next.delete(id);else next.add(id);return next});const render=(parentId:string,depth:number,trail:Set<string>):any[]=>{return(children.get(parentId)||[]).flatMap(location=>{if(trail.has(location.id))return[];const hasChildren=(children.get(location.id)||[]).length>0;const isCollapsed=collapsed.has(location.id);const row=<article className={`tree-row ${depth===0?'root ':''}${!location.active?'inactive':''}`} style={{'--depth':depth} as any} key={location.id}><button className={`tree-toggle ${hasChildren?'':'leaf'}`} onClick={()=>{if(hasChildren)toggle(location.id)}} aria-expanded={hasChildren?!isCollapsed:undefined} title={hasChildren?(isCollapsed?(lang==='de'?'Unterpunkte anzeigen':'Show children'):(lang==='de'?'Unterpunkte ausblenden':'Hide children')):undefined}>{hasChildren?(isCollapsed?<ChevronRight/>:<ChevronDown/>):<span/>}</button><span className="master-icon"><MapPin/></span><div><b>{location.name}</b><small>{location.type}</small></div><span className={`status ${location.active?'on':'off'}`}>{location.active?t('active'):t('deactivate')}</span><div className="row-actions"><button onClick={()=>edit({...location,active:!!location.active})}><Edit3/></button><button onClick={()=>remove(location.id)}><Trash2/></button></div></article>;return[row,...(!hasChildren||isCollapsed?[]:render(location.id,depth+1,new Set([...trail,location.id])))]})};return <div className="master-list location-tree">{render('root',0,new Set())}</div>}
 function entityMeta(tab:string,x:any,data:AppData,t:any){const find=(k:keyof AppData,id:string)=>(data[k]as Entity[]).find(y=>y.id===id)?.name||'';if(tab==='locations')return `${x.type}${x.parent_id?' · '+find('locations',x.parent_id):''}`;if(tab==='sources')return `${x.device_type}${x.location_id?' · '+find('locations',x.location_id):''}`;if(tab==='targets')return `${x.storage_type}${x.location_id?' · '+find('locations',x.location_id):''}`;if(tab==='datasets')return `${t(x.priority)} · ${find('sources',x.source_id)}`;return x.notes||'—'}
@@ -353,10 +358,11 @@ function SystemSettings({t,lang,theme,setLang,setTheme,backups,loadBackups,relea
 </div>
 </>}
 
-function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h=getHelp(lang);const[attempted,setAttempted]=useState(false);const[durationUnit,setDurationUnit]=useState<'minutes'|'hours'>(()=>value.duration_minutes>=60&&value.duration_minutes%60===0?'hours':'minutes');const set=(k:string,v:any)=>setValue({...value,[k]:v});const sourceValue=value.source_target_id?`target:${value.source_target_id}`:value.source_id?`source:${value.source_id}`:'';const availableAtTarget=new Set(data.dataset_availability.filter((a:any)=>a.node_type==='target'&&a.node_id===value.source_target_id).map((a:any)=>a.dataset_id));const datasets=data.datasets.filter((d:Entity)=>d.active&&(value.source_target_id?availableAtTarget.has(d.id):d.source_id===value.source_id));const targetSourceIds=new Set(data.dataset_availability.filter((a:any)=>a.node_type==='target').map((a:any)=>a.node_id));const sourceOptions=[...data.sources.filter((x:Entity)=>x.active).map((x:Entity)=>({value:`source:${x.id}`,label:x.name})),...data.targets.filter((x:Entity)=>x.active&&targetSourceIds.has(x.id)).map((x:Entity)=>({value:`target:${x.id}`,label:`${x.name} · ${t('availableCopy')}`}))];const chooseSource=(ref:string)=>{if(!ref)return setValue({...value,source_id:'',source_target_id:null,dataset_ids:[]});const[type,nodeId]=ref.split(':');if(type==='source')return setValue({...value,source_id:nodeId,source_target_id:null,dataset_ids:[]});const firstAvailability=data.dataset_availability.find((a:any)=>a.node_type==='target'&&a.node_id===nodeId);const firstDataset=data.datasets.find((d:Entity)=>d.id===firstAvailability?.dataset_id);setValue({...value,source_id:firstDataset?.source_id||'',source_target_id:nodeId,dataset_ids:[]})};const durationValue=durationUnit==='hours'?value.duration_minutes/60:value.duration_minutes;return <Modal title={value.id?t('edit'):t('newPlan')} close={()=>setValue(null)}>
+function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h=getHelp(lang);const[attempted,setAttempted]=useState(false);const[durationUnit,setDurationUnit]=useState<'minutes'|'hours'>(()=>value.duration_minutes>=60&&value.duration_minutes%60===0?'hours':'minutes');const autoName=useRef('');const set=(k:string,v:any)=>setValue({...value,[k]:v});const sourceValue=value.source_target_id?`target:${value.source_target_id}`:value.source_id?`source:${value.source_id}`:'';const availableAtTarget=new Set(data.dataset_availability.filter((a:any)=>a.node_type==='target'&&a.node_id===value.source_target_id).map((a:any)=>a.dataset_id));const datasets=data.datasets.filter((d:Entity)=>d.active&&(value.source_target_id?availableAtTarget.has(d.id):d.source_id===value.source_id));const targetSourceIds=new Set(data.dataset_availability.filter((a:any)=>a.node_type==='target').map((a:any)=>a.node_id));const sourceOptions=[...data.sources.filter((x:Entity)=>x.active).map((x:Entity)=>({value:`source:${x.id}`,label:x.name})),...data.targets.filter((x:Entity)=>x.active&&targetSourceIds.has(x.id)).map((x:Entity)=>({value:`target:${x.id}`,label:`${x.name} · ${t('availableCopy')}`}))];const chooseSource=(ref:string)=>{if(!ref)return setValue({...value,source_id:'',source_target_id:null,dataset_ids:[]});const[type,nodeId]=ref.split(':');if(type==='source')return setValue({...value,source_id:nodeId,source_target_id:null,dataset_ids:[]});const firstAvailability=data.dataset_availability.find((a:any)=>a.node_type==='target'&&a.node_id===nodeId);const firstDataset=data.datasets.find((d:Entity)=>d.id===firstAvailability?.dataset_id);setValue({...value,source_id:firstDataset?.source_id||'',source_target_id:nodeId,dataset_ids:[]})};const sourceName=sourceOptions.find((x:any)=>x.value===sourceValue)?.label?.split(' · ')[0]||'';const targetName=data.targets.find((x:Entity)=>x.id===value.target_id)?.name||'';const datasetName=data.datasets.find((x:Entity)=>x.id===value.dataset_ids[0])?.name||'';const suggestion=[sourceName&&targetName?`${sourceName} → ${targetName}`:'',datasetName].filter(Boolean).join(' · ');useEffect(()=>{if(suggestion&&(!value.name||value.name===autoName.current)){autoName.current=suggestion;setValue({...value,name:suggestion})}},[suggestion]);const durationValue=durationUnit==='hours'?value.duration_minutes/60:value.duration_minutes;return <Modal title={value.id?t('edit'):t('newPlan')} close={()=>setValue(null)}>
 <div className="form-grid">
 <Field label={t('name')} help={h.name} wide>
 <input value={value.name} onChange={e=>set('name',e.target.value)} autoFocus/>
+{suggestion&&value.name!==suggestion&&<button type="button" className="name-suggestion" onClick={()=>{autoName.current=suggestion;set('name',suggestion)}}>{t('useSuggestedName')}: <b>{suggestion}</b></button>}
 </Field>
 <Field label={t('source')} help={h.planSource}>
 <select value={sourceValue} onChange={e=>chooseSource(e.target.value)}><option value="">Select…</option>{sourceOptions.map((option:any)=><option key={option.value} value={option.value}>{option.label}</option>)}</select>
@@ -365,7 +371,7 @@ function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h
 <Select value={value.target_id} onChange={(v:string)=>set('target_id',v)} options={data.targets.filter((target:Entity)=>target.id!==value.source_target_id)}/>
 </Field>
 <Field label={t('dataset')} help={h.planDatasets} wide>
-  {value.source_target_id&&<div className="chain-note"><Activity/>{t('chainSourceHint')}</div>}
+  {value.source_target_id&&<div className="chain-note"><Activity/><div><b>{t('dependentPlan')}</b><span>{t('chainSourceHint')}</span></div></div>}
   {!value.source_id ? <div className="dataset-empty"><CircleHelp/><div><b>{h.chooseSourceFirst}</b><span>{h.planDatasets}</span></div></div>
   : datasets.length === 0 ? <div className="dataset-empty warning"><TriangleAlert/><div><b>{h.noDatasets}</b><button type="button" onClick={onOpenSettings}>{h.manageDatasets}<ChevronRight/></button></div></div>
   : <div className={`checkbox-grid dataset-select ${attempted&&value.dataset_ids.length===0?'invalid':''}`}>{datasets.map((d:Entity)=>
@@ -373,7 +379,7 @@ function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h
   {attempted&&value.dataset_ids.length===0&&datasets.length>0&&<p className="field-error"><TriangleAlert/>{h.selectOne}</p>}
 </Field>
 <Field label={t('type')} help={h.protectionType}>
-<select value={value.protection_type} onChange={e=>set('protection_type',e.target.value)}>
+<select value={value.protection_type} onChange={e=>{const next=e.target.value;setValue({...value,protection_type:next,color:next==='backup'?'#16a36a':next==='synchronization'?'#3478f6':'#7c5ce7'})}}>
 <option value="backup">{t('backup')}</option>
 <option value="synchronization">{t('synchronization')}</option>
 <option value="archive">{t('archive')}</option>

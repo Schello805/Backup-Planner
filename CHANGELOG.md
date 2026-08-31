@@ -4,6 +4,15 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-08-31
+
+- Added visual dataset protection paths that show each source, synchronization, backup, and archive step.
+- Rebuilt the backup-plan table as readable, localized cards on smartphones.
+- Added active-record counts to every master-data category in Settings.
+- Added automatic, non-destructive backup-plan name suggestions.
+- Clarified downstream plan dependencies and standardized protection-type colors.
+- Added subtle toast feedback for plan and master-data CRUD actions.
+
 ## [0.1.10] - 2026-08-31
 
 - Rebuilt the mobile location-tree row layout so controls stay on one line.
