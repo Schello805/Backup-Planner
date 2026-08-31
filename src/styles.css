@@ -311,6 +311,9 @@ footer{padding:18px 14px}
 .dataset-empty{min-height:74px;border:1px dashed var(--border);background:var(--surface2);border-radius:10px;padding:14px;display:flex;align-items:flex-start;gap:11px;color:var(--muted)}
 .dataset-empty>svg{width:19px;flex:0 0 19px;color:var(--blue)}
 .dataset-empty b,.dataset-empty span{display:block;font-size:11px;line-height:1.45}
+.chain-note{display:flex;align-items:center;gap:7px;margin-bottom:8px;padding:8px 10px;border-radius:8px;background:rgba(52,120,246,.08);color:var(--blue);font-size:11px;font-weight:650}
+.chain-note svg{width:15px;height:15px}
+.derived-label{display:block;color:var(--blue);font-size:9px;margin-top:2px}
 .dataset-empty span{font-size:10px;margin-top:3px}
 .dataset-empty.warning{border-color:color-mix(in srgb,var(--orange) 45%,var(--border));background:color-mix(in srgb,var(--orange) 7%,var(--surface))}
 .dataset-empty.warning>svg{color:var(--orange)}

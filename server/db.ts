@@ -27,6 +27,9 @@ CREATE INDEX IF NOT EXISTS idx_datasets_source ON datasets(source_id);
 CREATE INDEX IF NOT EXISTS idx_plans_source_target ON plans(source_id,target_id);
 CREATE INDEX IF NOT EXISTS idx_plans_deleted ON plans(deleted_at);
 `);
+const planColumns = db.prepare('PRAGMA table_info(plans)').all() as Array<{name:string}>;
+if (!planColumns.some(column => column.name === 'source_target_id')) db.exec('ALTER TABLE plans ADD COLUMN source_target_id TEXT REFERENCES targets(id)');
+db.exec('CREATE INDEX IF NOT EXISTS idx_plans_source_target_node ON plans(source_target_id)');
 db.pragma('optimize');
 
 export const now = () => new Date().toISOString();

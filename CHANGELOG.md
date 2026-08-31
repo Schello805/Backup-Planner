@@ -4,6 +4,13 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.5] - 2026-08-31
+
+- Added automatic dataset propagation through multi-stage backup and synchronization chains.
+- Made storage targets with available copies selectable as sources for downstream plans.
+- Added validation that prevents plans from using unavailable datasets or the same source and target.
+- Added chain-origin labels, bilingual guidance, CSV support, schema migration, and automated chain tests.
+
 ## [0.1.4] - 2026-08-28
 
 - Unified the focus styling of the compound duration control.

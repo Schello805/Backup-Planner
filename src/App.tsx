@@ -5,7 +5,7 @@ import{api}from'./api';import{useCopy,type Lang}from'./i18n';import type{AppData
 import{getHelp}from'./help';
 
 type View='dashboard'|'plans'|'schedule'|'settings';
-const blankPlan={name:'',source_id:'',target_id:'',software_id:null,dataset_ids:[],protection_type:'backup',schedule_type:'weekly',weekdays:[],day_of_month:1,start_time:'03:00',duration_minutes:30,retention_value:null,retention_unit:'days',version_count:null,immutable:false,encrypted:false,owner:'',color:'#3478f6',notes:'',active:true};
+const blankPlan={name:'',source_id:'',source_target_id:null,target_id:'',software_id:null,dataset_ids:[],protection_type:'backup',schedule_type:'weekly',weekdays:[],day_of_month:1,start_time:'03:00',duration_minutes:30,retention_value:null,retention_unit:'days',version_count:null,immutable:false,encrypted:false,owner:'',color:'#3478f6',notes:'',active:true};
 const entityDefaults:Record<string,any>={locations:{name:'',type:'site',parent_id:null,notes:'',active:true},sources:{name:'',location_id:null,device_type:'computer',notes:'',active:true},targets:{name:'',location_id:null,storage_type:'nas',provider:'',immutable_capable:false,encrypted_default:false,notes:'',active:true},datasets:{name:'',source_id:'',priority:'normal',notes:'',active:true},software:{name:'',notes:'',active:true}};
 const iconByView={dashboard:LayoutDashboard,plans:Database,schedule:CalendarDays,settings:SettingsIcon};
 
@@ -134,7 +134,7 @@ function Stat({icon,value,label,tone='blue'}:any){return <article className="sta
 </div>
 </article>}
 
-function Plans({data,t,edit,remove}:any){const[q,setQ]=useState('');const[type,setType]=useState('all');const names=(key:string,id:string)=>data[key].find((x:Entity)=>x.id===id)?.name||'—';const list=data.plans.filter((p:Plan)=>!p.deleted_at&&(type==='all'||p.protection_type===type)&&[p.name,names('sources',p.source_id),names('targets',p.target_id)].join(' ').toLowerCase().includes(q.toLowerCase()));return <section className="section-card">
+function Plans({data,t,edit,remove}:any){const[q,setQ]=useState('');const[type,setType]=useState('all');const names=(key:string,id:string)=>data[key].find((x:Entity)=>x.id===id)?.name||'—';const sourceName=(p:Plan)=>p.source_target_id?names('targets',p.source_target_id):names('sources',p.source_id);const list=data.plans.filter((p:Plan)=>!p.deleted_at&&(type==='all'||p.protection_type===type)&&[p.name,sourceName(p),names('targets',p.target_id)].join(' ').toLowerCase().includes(q.toLowerCase()));return <section className="section-card">
 <div className="toolbar">
 <label className="search">
 <Search/>
@@ -169,7 +169,7 @@ function Plans({data,t,edit,remove}:any){const[q,setQ]=useState('');const[type,s
 </div>
 </div>
 </td>
-<td>{names('sources',p.source_id)}</td>
+<td>{sourceName(p)}{p.source_target_id&&<small className="derived-label">{t('derivedCopy')}</small>}</td>
 <td>{names('targets',p.target_id)}</td>
 <td>
 <span className={`badge ${p.protection_type}`}>{t(p.protection_type)}</span>
@@ -350,18 +350,19 @@ function SystemSettings({t,lang,theme,setLang,setTheme,backups,loadBackups,relea
 </div>
 </>}
 
-function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h=getHelp(lang);const[attempted,setAttempted]=useState(false);const[durationUnit,setDurationUnit]=useState<'minutes'|'hours'>(()=>value.duration_minutes>=60&&value.duration_minutes%60===0?'hours':'minutes');const set=(k:string,v:any)=>setValue({...value,[k]:v});const datasets=data.datasets.filter((d:Entity)=>d.source_id===value.source_id&&d.active);const durationValue=durationUnit==='hours'?value.duration_minutes/60:value.duration_minutes;return <Modal title={value.id?t('edit'):t('newPlan')} close={()=>setValue(null)}>
+function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h=getHelp(lang);const[attempted,setAttempted]=useState(false);const[durationUnit,setDurationUnit]=useState<'minutes'|'hours'>(()=>value.duration_minutes>=60&&value.duration_minutes%60===0?'hours':'minutes');const set=(k:string,v:any)=>setValue({...value,[k]:v});const sourceValue=value.source_target_id?`target:${value.source_target_id}`:value.source_id?`source:${value.source_id}`:'';const availableAtTarget=new Set(data.dataset_availability.filter((a:any)=>a.node_type==='target'&&a.node_id===value.source_target_id).map((a:any)=>a.dataset_id));const datasets=data.datasets.filter((d:Entity)=>d.active&&(value.source_target_id?availableAtTarget.has(d.id):d.source_id===value.source_id));const targetSourceIds=new Set(data.dataset_availability.filter((a:any)=>a.node_type==='target').map((a:any)=>a.node_id));const sourceOptions=[...data.sources.filter((x:Entity)=>x.active).map((x:Entity)=>({value:`source:${x.id}`,label:x.name})),...data.targets.filter((x:Entity)=>x.active&&targetSourceIds.has(x.id)).map((x:Entity)=>({value:`target:${x.id}`,label:`${x.name} · ${t('availableCopy')}`}))];const chooseSource=(ref:string)=>{if(!ref)return setValue({...value,source_id:'',source_target_id:null,dataset_ids:[]});const[type,nodeId]=ref.split(':');if(type==='source')return setValue({...value,source_id:nodeId,source_target_id:null,dataset_ids:[]});const firstAvailability=data.dataset_availability.find((a:any)=>a.node_type==='target'&&a.node_id===nodeId);const firstDataset=data.datasets.find((d:Entity)=>d.id===firstAvailability?.dataset_id);setValue({...value,source_id:firstDataset?.source_id||'',source_target_id:nodeId,dataset_ids:[]})};const durationValue=durationUnit==='hours'?value.duration_minutes/60:value.duration_minutes;return <Modal title={value.id?t('edit'):t('newPlan')} close={()=>setValue(null)}>
 <div className="form-grid">
 <Field label={t('name')} help={h.name} wide>
 <input value={value.name} onChange={e=>set('name',e.target.value)} autoFocus/>
 </Field>
 <Field label={t('source')} help={h.planSource}>
-<Select value={value.source_id} onChange={(v:string)=>setValue({...value,source_id:v,dataset_ids:[]})} options={data.sources}/>
+<select value={sourceValue} onChange={e=>chooseSource(e.target.value)}><option value="">Select…</option>{sourceOptions.map((option:any)=><option key={option.value} value={option.value}>{option.label}</option>)}</select>
 </Field>
 <Field label={t('target')} help={h.planTarget}>
-<Select value={value.target_id} onChange={(v:string)=>set('target_id',v)} options={data.targets}/>
+<Select value={value.target_id} onChange={(v:string)=>set('target_id',v)} options={data.targets.filter((target:Entity)=>target.id!==value.source_target_id)}/>
 </Field>
 <Field label={t('dataset')} help={h.planDatasets} wide>
+  {value.source_target_id&&<div className="chain-note"><Activity/>{t('chainSourceHint')}</div>}
   {!value.source_id ? <div className="dataset-empty"><CircleHelp/><div><b>{h.chooseSourceFirst}</b><span>{h.planDatasets}</span></div></div>
   : datasets.length === 0 ? <div className="dataset-empty warning"><TriangleAlert/><div><b>{h.noDatasets}</b><button type="button" onClick={onOpenSettings}>{h.manageDatasets}<ChevronRight/></button></div></div>
   : <div className={`checkbox-grid dataset-select ${attempted&&value.dataset_ids.length===0?'invalid':''}`}>{datasets.map((d:Entity)=>
