@@ -67,7 +67,7 @@ header{height:82px;background:color-mix(in srgb,var(--surface) 90%,transparent);
 .section-head{padding:23px 25px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .section-head h2{font-size:19px;margin:5px 0 0}
 .dataset-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;padding:22px}
-.destination-overview{padding-bottom:18px}.destination-overview>.section-head>b{font-size:24px}.destination-bars{padding:0 22px;display:grid;gap:11px}.destination-row{display:grid;grid-template-columns:11px minmax(110px,180px) 1fr 30px;align-items:center;gap:10px;font-size:12px}.target-color,.target-name i{display:inline-block;width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 3px rgba(127,140,160,.12)}.destination-track{height:8px;border-radius:999px;background:var(--surface2);overflow:hidden}.destination-track i{display:block;height:100%;border-radius:inherit}.destination-row strong{text-align:right}
+.destination-overview{padding-bottom:20px}.destination-total{text-align:right}.destination-total b,.destination-total small{display:block}.destination-total b{font-size:24px}.destination-total small{font-size:9px;color:var(--muted);margin-top:2px}.destination-bars{padding:18px 22px 0;display:grid;gap:9px}.destination-row{display:grid;grid-template-columns:11px minmax(140px,220px) 1fr 48px;align-items:center;gap:12px;min-height:46px;padding:0 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);font-size:12px}.target-color,.target-name i{display:inline-block;width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 3px rgba(127,140,160,.12)}.destination-track{height:9px;border-radius:999px;background:color-mix(in srgb,var(--border) 65%,var(--surface));overflow:hidden}.destination-track i{display:block;height:100%;border-radius:inherit}.destination-row strong{text-align:right}.destination-row strong b,.destination-row strong small{display:block}.destination-row strong small{font-size:8px;color:var(--muted);margin-top:2px}
 .dataset-card{background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:18px}
 .dataset-title,.dataset-title>div{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .dataset-title h3{font-size:15px;margin:0}
@@ -162,7 +162,7 @@ td{padding:15px 18px;border-top:1px solid var(--border)}
 .settings-content{min-height:580px}
 .master-list{padding:8px 22px}
 .master-list article{display:grid;grid-template-columns:42px 1fr auto auto;align-items:center;gap:13px;padding:13px 4px;border-bottom:1px solid var(--border)}
-.location-tree .tree-row{grid-template-columns:26px 42px 1fr auto auto;position:relative;padding-left:calc(4px + var(--depth)*28px)}
+.location-tree .tree-row{grid-template-columns:26px 42px 1fr auto auto;position:relative;height:64px;min-height:64px;max-height:64px;box-sizing:border-box;padding-left:calc(4px + var(--depth)*28px)}
 .location-tree .tree-row:before{content:"";position:absolute;left:calc(17px + var(--depth)*28px);top:0;bottom:0;border-left:1px solid var(--border)}
 .location-tree .tree-row:after{content:"";position:absolute;left:calc(17px + var(--depth)*28px);top:50%;width:14px;border-top:1px solid var(--border)}
 .location-tree .tree-row.root:before,.location-tree .tree-row.root:after{display:none}
@@ -318,7 +318,7 @@ footer{padding:18px 14px}
 .switches .help-tip,.check .help-tip{margin-left:2px}
 .switches .help-tip>span,.check .help-tip>span{left:50%;right:auto;transform:translate(-50%,8px)}
 .switches .help-tip:hover>span,.switches .help-tip:focus>span,.check .help-tip:hover>span,.check .help-tip:focus>span{transform:translate(-50%,0)}
-@media(max-width:760px){.concept-card{margin:12px;padding:13px}.help-tip>span{bottom:82px}.destination-bars{padding:0 12px}.destination-row{grid-template-columns:11px 95px 1fr 24px;gap:7px}}
+@media(max-width:760px){.concept-card{margin:12px;padding:13px}.help-tip>span{bottom:82px}.destination-bars{padding:12px}.destination-row{grid-template-columns:11px minmax(80px,120px) 1fr 38px;gap:8px;padding:0 9px}.destination-row strong small{display:none}}
 .dataset-empty{min-height:74px;border:1px dashed var(--border);background:var(--surface2);border-radius:10px;padding:14px;display:flex;align-items:flex-start;gap:11px;color:var(--muted)}
 .dataset-empty>svg{width:19px;flex:0 0 19px;color:var(--blue)}
 .dataset-empty b,.dataset-empty span{display:block;font-size:11px;line-height:1.45}

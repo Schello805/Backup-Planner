@@ -4,6 +4,13 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-08-31
+
+- Fixed oversized gaps between nested rows in the location tree.
+- Standardized tree rows at a compact, readable height.
+- Redesigned the target distribution with spacious cards, clearer bars, totals, and percentages.
+- Improved the responsive layout and completed browser-based visual verification.
+
 ## [0.1.8] - 2026-08-31
 
 - Added a live current-time line to today's row in the weekly Gantt diagram.
