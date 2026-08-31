@@ -62,7 +62,7 @@ export default function App(){
 <X/>
 </button>
 </div>}
-   <div className="page">{view==='dashboard'&&data&&<Dashboard data={data} t={t} onStart={()=>nav('settings')}/>} {view==='plans'&&data&&<Plans data={data} t={t} edit={(p:Plan)=>setPlan({...p,immutable:!!p.immutable,encrypted:!!p.encrypted,active:!!p.active})} remove={async (p:Plan)=>{if(confirm(t('delete')+'?')){await api(`/plans/${p.id}`,{method:'DELETE'});await load();notify(t('movedToTrash'))}}}/>} {view==='schedule'&&data&&<Schedule data={data} t={t} lang={lang}/>} {view==='settings'&&data&&<Settings data={data} t={t} lang={lang} theme={theme} setLang={setLang} setTheme={setTheme} reload={load} release={release} setRelease={setRelease} notify={notify}/>}</div>
+   <div className="page">{view==='dashboard'&&data&&<Dashboard data={data} t={t} onStart={()=>nav('settings')}/>} {view==='plans'&&data&&<Plans data={data} t={t} edit={(p:Plan)=>setPlan({...p,immutable:!!p.immutable,encrypted:!!p.encrypted,active:!!p.active})} remove={async (p:Plan)=>{if(confirm(t('delete')+'?')){await api(`/plans/${p.id}`,{method:'DELETE'});await load();notify(t('movedToTrash'))}}}/>} {view==='schedule'&&data&&<Schedule data={data} t={t} lang={lang} edit={(p:Plan)=>setPlan({...p,immutable:!!p.immutable,encrypted:!!p.encrypted,active:!!p.active})}/>} {view==='settings'&&data&&<Settings data={data} t={t} lang={lang} theme={theme} setLang={setLang} setTheme={setTheme} reload={load} release={release} setRelease={setRelease} notify={notify}/>}</div>
    <footer>
 <span>Backup Planner · v{data?.meta.version}</span>
 <span>·</span>
@@ -197,7 +197,7 @@ function Plans({data,t,edit,remove}:any){const[q,setQ]=useState('');const[type,s
 </div>}</section>}
 function scheduleLabel(p:Plan,t:any){if(p.schedule_type==='manual')return t('manual');if(p.schedule_type==='daily')return `${t('daily')} · ${p.start_time}`;if(p.schedule_type==='monthly')return `${t('monthly')} · ${p.day_of_month} · ${p.start_time}`;return `${p.weekdays.map((d:number)=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ')} · ${p.start_time}`}
 
-function Schedule({data,t,lang}:{data:AppData;t:any;lang:Lang}){const[mode,setMode]=useState<'week'|'months'|'agenda'>('week');const[date,setDate]=useState(new Date());const[now,setNow]=useState(new Date());useEffect(()=>{const timer=window.setInterval(()=>setNow(new Date()),60000);return()=>window.clearInterval(timer)},[]);const names=(key:keyof AppData,id:string)=>(data[key]as Entity[]).find(x=>x.id===id)?.name||'—';const week=startOfWeek(date,{weekStartsOn:1});const days=eachDayOfInterval({start:week,end:addDays(week,6)});const occurrences=(day:Date)=>data.plans.filter(p=>!p.deleted_at&&p.active&&matchesDay(p,day));const nowPosition=(now.getHours()*60+now.getMinutes())/1440*100;return <section className="section-card schedule-card">
+function Schedule({data,t,lang,edit}:{data:AppData;t:any;lang:Lang;edit:(plan:Plan)=>void}){const[mode,setMode]=useState<'week'|'months'|'agenda'>('week');const[date,setDate]=useState(new Date());const[now,setNow]=useState(new Date());useEffect(()=>{const timer=window.setInterval(()=>setNow(new Date()),60000);return()=>window.clearInterval(timer)},[]);const names=(key:keyof AppData,id:string)=>(data[key]as Entity[]).find(x=>x.id===id)?.name||'—';const week=startOfWeek(date,{weekStartsOn:1});const days=eachDayOfInterval({start:week,end:addDays(week,6)});const occurrences=(day:Date)=>data.plans.filter(p=>!p.deleted_at&&p.active&&matchesDay(p,day));const nowPosition=(now.getHours()*60+now.getMinutes())/1440*100;const editHint=lang==='de'?'Klicken, um diesen Backup-Plan zu bearbeiten':'Click to edit this backup plan';return <section className="section-card schedule-card">
 <div className="toolbar schedule-tools">
 <div className="segmented">{(['week','months','agenda']as const).map(x=>
 <button className={mode===x?'active':''} onClick={()=>setMode(x)} key={x}>{t(x)}</button>)}</div>
@@ -215,11 +215,11 @@ function Schedule({data,t,lang}:{data:AppData;t:any;lang:Lang}){const[mode,setMo
 <b>{format(day,'EEE dd',{locale:lang==='de'?de:enUS})}</b>
 <div className="timeline">{Array.from({length:24},(_,h)=>
 <i key={h}/>)}{isSameDay(day,now)&&<span className="now-line" style={{left:`${nowPosition}%`}} title={`${lang==='de'?'Jetzt':'Now'} · ${format(now,'HH:mm')}`}><b>{format(now,'HH:mm')}</b></span>}{occurrences(day).map(p=>
-<div className={`job ${isPlanRunning(p,day,now)?'running':''}`} key={p.id} style={{left:`${timeMins(p.start_time)/1440*100}%`,width:`${Math.max(p.duration_minutes/1440*100,2.8)}%`,background:p.color}} title={`${p.name} · ${p.start_time} · ${p.duration_minutes} min${isPlanRunning(p,day,now)?` · ${lang==='de'?'läuft jetzt':'running now'}`:''}`}>
+<button type="button" className={`job ${isPlanRunning(p,day,now)?'running':''}`} onClick={()=>edit(p)} key={p.id} style={{left:`${timeMins(p.start_time)/1440*100}%`,width:`${Math.max(p.duration_minutes/1440*100,2.8)}%`,background:p.color}} title={`${p.name} · ${p.start_time} · ${p.duration_minutes} min${isPlanRunning(p,day,now)?` · ${lang==='de'?'läuft jetzt':'running now'}`:''} · ${editHint}`} aria-label={`${p.name} · ${editHint}`}>
 <span>{p.name}</span>
-</div>)}</div>
-</div>)}</div>}{mode==='months'&&<MonthGantt date={date} data={data} names={names}/>} {mode==='agenda'&&<div className="agenda">{days.flatMap(day=>occurrences(day).map(p=>({day,p}))).sort((a,b)=>a.day.getTime()+timeMins(a.p.start_time)-b.day.getTime()-timeMins(b.p.start_time)).map(({day,p})=>
-<article key={day.toISOString()+p.id}>
+</button>)}</div>
+</div>)}</div>}{mode==='months'&&<MonthGantt date={date} data={data} edit={edit} editHint={editHint}/>} {mode==='agenda'&&<div className="agenda">{days.flatMap(day=>occurrences(day).map(p=>({day,p}))).sort((a,b)=>a.day.getTime()+timeMins(a.p.start_time)-b.day.getTime()-timeMins(b.p.start_time)).map(({day,p})=>
+<button type="button" className="agenda-item" onClick={()=>edit(p)} title={editHint} key={day.toISOString()+p.id}>
 <time>{format(day,'EEE, d MMM',{locale:lang==='de'?de:enUS})}<b>{p.start_time}</b>
 </time>
 <i style={{background:p.color}}/>
@@ -228,15 +228,15 @@ function Schedule({data,t,lang}:{data:AppData;t:any;lang:Lang}){const[mode,setMo
 <span>{names('sources',p.source_id)} → {names('targets',p.target_id)}</span>
 </div>
 <em>{p.duration_minutes} {t('minutes')}</em>
-</article>)}</div>}</section>}
-function MonthGantt({date,data}:any){const start=startOfMonth(date),end=endOfMonth(addMonths(date,2)),days=eachDayOfInterval({start,end});return <div className="month-gantt">
+</button>)}</div>}</section>}
+function MonthGantt({date,data,edit,editHint}:any){const start=startOfMonth(date),end=endOfMonth(addMonths(date,2)),days=eachDayOfInterval({start,end});return <div className="month-gantt">
 <div className="month-head">
 <b>Backup plan</b>{days.map(d=>
 <span className={[0,6].includes(d.getDay())?'weekend':''} key={d.toISOString()}>{d.getDate()===1?<small>{format(d,'MMM')}</small>:null}{d.getDate()}</span>)}</div>{data.plans.filter((p:Plan)=>p.active&&!p.deleted_at).map((p:Plan)=>
 <div className="month-row" key={p.id}>
 <b>{p.name}<small>{p.start_time}</small>
 </b>{days.map(d=>
-<span className={[0,6].includes(d.getDay())?'weekend':''} key={d.toISOString()}>{matchesDay(p,d)&&<i style={{background:p.color}}/>}</span>)}</div>)}</div>}
+<span className={[0,6].includes(d.getDay())?'weekend':''} key={d.toISOString()}>{matchesDay(p,d)&&<button type="button" className="month-job" onClick={()=>edit(p)} style={{background:p.color}} title={`${p.name} · ${editHint}`} aria-label={`${p.name} · ${editHint}`}/>}</span>)}</div>)}</div>}
 function matchesDay(p:Plan,d:Date){if(p.schedule_type==='daily')return true;if(p.schedule_type==='weekly')return p.weekdays.includes(d.getDay());if(p.schedule_type==='monthly')return p.day_of_month===d.getDate();return false}function timeMins(x:string){const[h,m]=x.split(':').map(Number);return h*60+m}function isPlanRunning(p:Plan,day:Date,now:Date){if(!isSameDay(day,now)||!matchesDay(p,day))return false;const minute=now.getHours()*60+now.getMinutes(),start=timeMins(p.start_time);return minute>=start&&minute<start+p.duration_minutes}
 
 function Settings({data,t,lang,theme,setLang,setTheme,reload,release,setRelease,notify}:any){

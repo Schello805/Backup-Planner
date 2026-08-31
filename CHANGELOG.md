@@ -4,6 +4,12 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.12] - 2026-08-31
+
+- Made weekly Gantt bars directly open their backup plan for editing.
+- Made three-month timeline markers and agenda entries editable with one click.
+- Added hover, focus, tooltip, keyboard, and touch feedback to schedule entries.
+
 ## [0.1.11] - 2026-08-31
 
 - Added visual dataset protection paths that show each source, synchronization, backup, and archive step.

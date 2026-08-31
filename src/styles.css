@@ -133,8 +133,9 @@ td{padding:15px 18px;border-top:1px solid var(--border)}
 .gantt-row>b{padding:22px 13px;font-size:11px}
 .timeline{position:relative;display:grid;grid-template-columns:repeat(24,1fr)}
 .timeline>i{border-left:1px solid var(--border)}
-.job{position:absolute;top:13px;height:38px;border-radius:7px;color:white;box-shadow:0 4px 10px rgba(30,65,125,.15);min-width:33px;padding:0 7px;display:flex;align-items:center;overflow:hidden}
+.job{position:absolute;top:13px;height:38px;border:0;border-radius:7px;color:white;box-shadow:0 4px 10px rgba(30,65,125,.15);min-width:33px;padding:0 7px;display:flex;align-items:center;overflow:hidden;cursor:pointer;text-align:left}
 .job span{font-size:9px;font-weight:700;white-space:nowrap}
+.job:hover{filter:brightness(1.08);transform:translateY(-1px);box-shadow:0 7px 16px rgba(30,65,125,.24)}.job:focus-visible,.month-job:focus-visible,.agenda-item:focus-visible{outline:3px solid color-mix(in srgb,var(--blue) 45%,white);outline-offset:2px;z-index:6}
 .now-line{position:absolute;z-index:4;top:0;bottom:0;width:2px;background:#ef4444;box-shadow:0 0 0 1px rgba(255,255,255,.55);pointer-events:none}.now-line:after{content:"";position:absolute;top:0;left:50%;transform:translate(-50%,-1px);width:8px;height:8px;border-radius:50%;background:#ef4444}.now-line b{position:absolute;top:3px;left:6px;padding:2px 4px;border-radius:4px;background:#ef4444;color:white;font-size:8px;line-height:1;white-space:nowrap}.job.running{z-index:3;outline:3px solid color-mix(in srgb,#ef4444 75%,white);box-shadow:0 0 0 5px rgba(239,68,68,.14),0 5px 14px rgba(30,65,125,.2);animation:running-pulse 1.8s ease-in-out infinite}@keyframes running-pulse{50%{box-shadow:0 0 0 8px rgba(239,68,68,.05),0 5px 14px rgba(30,65,125,.2)}}
 .month-gantt{font-size:10px}
 .month-head,.month-row{display:grid;grid-template-columns:190px repeat(92,30px);min-width:2950px}
@@ -144,14 +145,15 @@ td{padding:15px 18px;border-top:1px solid var(--border)}
 .month-head small{font-size:7px;color:var(--blue)}
 .month-row b small{display:block;color:var(--muted);font-weight:400}
 .month-row span.weekend,.month-head span.weekend{background:color-mix(in srgb,var(--surface2) 70%,var(--border))}
-.month-row i{width:22px;height:22px;border-radius:6px}
+.month-job{width:22px;height:22px;border:0;border-radius:6px;padding:0;box-shadow:0 2px 5px rgba(30,65,125,.14)}.month-job:hover{transform:scale(1.12);filter:brightness(1.08)}
 .agenda{padding:10px 22px}
-.agenda article{display:grid;grid-template-columns:120px 5px 1fr auto;gap:14px;align-items:center;border-bottom:1px solid var(--border);padding:15px 5px}
-.agenda time,.agenda time b,.agenda article div b,.agenda article div span{display:block}
+.agenda-item{width:100%;display:grid;grid-template-columns:120px 5px 1fr auto;gap:14px;align-items:center;border:0;border-bottom:1px solid var(--border);padding:15px 5px;background:transparent;color:var(--text);text-align:left}
+.agenda-item:hover{background:var(--surface2)}
+.agenda time,.agenda time b,.agenda-item div b,.agenda-item div span{display:block}
 .agenda time{font-size:11px;color:var(--muted)}
 .agenda time b{color:var(--text);margin-top:3px}
-.agenda article>i{height:38px;border-radius:4px}
-.agenda article div span{font-size:10px;color:var(--muted);margin-top:3px}
+.agenda-item>i{height:38px;border-radius:4px}
+.agenda-item div span{font-size:10px;color:var(--muted);margin-top:3px}
 .agenda em{font-size:10px;color:var(--muted);font-style:normal}
 .settings-layout{display:grid;grid-template-columns:220px 1fr;gap:18px}
 .settings-nav{display:flex;flex-direction:column;gap:4px}
@@ -302,7 +304,7 @@ footer{padding:18px 14px}
 .schedule-tools{flex-direction:column}
 .period{width:100%;justify-content:space-between}
 .agenda{padding:7px}
-.agenda article{grid-template-columns:90px 4px 1fr}
+.agenda-item{grid-template-columns:90px 4px 1fr}
 .agenda em{display:none}
 }
 .concept-card{margin:18px 22px 6px;padding:16px 18px;border:1px solid color-mix(in srgb,var(--blue) 25%,var(--border));background:color-mix(in srgb,var(--blue) 6%,var(--surface));border-radius:13px;display:flex;align-items:flex-start;gap:13px}
