@@ -1,6 +1,6 @@
 import{useEffect,useState}from'react';
 import{Activity,Archive,CalendarDays,ChevronDown,ChevronRight,CircleHelp,Database,Download,Edit3,FolderArchive,Github,HardDrive,Info,Languages,LayoutDashboard,MapPin,Moon,Plus,RefreshCw,Search,Server,Settings as SettingsIcon,ShieldCheck,Sun,Trash2,TriangleAlert,X}from'lucide-react';
-import{addDays,addMonths,eachDayOfInterval,endOfMonth,format,startOfMonth,startOfWeek}from'date-fns';import{de,enUS}from'date-fns/locale';
+import{addDays,addMonths,eachDayOfInterval,endOfMonth,format,isSameDay,startOfMonth,startOfWeek}from'date-fns';import{de,enUS}from'date-fns/locale';
 import{api}from'./api';import{useCopy,type Lang}from'./i18n';import type{AppData,Entity,Plan}from'./types';
 import{getHelp}from'./help';
 
@@ -192,7 +192,7 @@ function Plans({data,t,edit,remove}:any){const[q,setQ]=useState('');const[type,s
 </div>}</section>}
 function scheduleLabel(p:Plan,t:any){if(p.schedule_type==='manual')return t('manual');if(p.schedule_type==='daily')return `${t('daily')} · ${p.start_time}`;if(p.schedule_type==='monthly')return `${t('monthly')} · ${p.day_of_month} · ${p.start_time}`;return `${p.weekdays.map((d:number)=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ')} · ${p.start_time}`}
 
-function Schedule({data,t,lang}:{data:AppData;t:any;lang:Lang}){const[mode,setMode]=useState<'week'|'months'|'agenda'>('week');const[date,setDate]=useState(new Date());const names=(key:keyof AppData,id:string)=>(data[key]as Entity[]).find(x=>x.id===id)?.name||'—';const week=startOfWeek(date,{weekStartsOn:1});const days=eachDayOfInterval({start:week,end:addDays(week,6)});const occurrences=(day:Date)=>data.plans.filter(p=>!p.deleted_at&&p.active&&matchesDay(p,day));return <section className="section-card schedule-card">
+function Schedule({data,t,lang}:{data:AppData;t:any;lang:Lang}){const[mode,setMode]=useState<'week'|'months'|'agenda'>('week');const[date,setDate]=useState(new Date());const[now,setNow]=useState(new Date());useEffect(()=>{const timer=window.setInterval(()=>setNow(new Date()),60000);return()=>window.clearInterval(timer)},[]);const names=(key:keyof AppData,id:string)=>(data[key]as Entity[]).find(x=>x.id===id)?.name||'—';const week=startOfWeek(date,{weekStartsOn:1});const days=eachDayOfInterval({start:week,end:addDays(week,6)});const occurrences=(day:Date)=>data.plans.filter(p=>!p.deleted_at&&p.active&&matchesDay(p,day));const nowPosition=(now.getHours()*60+now.getMinutes())/1440*100;return <section className="section-card schedule-card">
 <div className="toolbar schedule-tools">
 <div className="segmented">{(['week','months','agenda']as const).map(x=>
 <button className={mode===x?'active':''} onClick={()=>setMode(x)} key={x}>{t(x)}</button>)}</div>
@@ -209,8 +209,8 @@ function Schedule({data,t,lang}:{data:AppData;t:any;lang:Lang}){const[mode,setMo
 <div className="gantt-row" key={day.toISOString()}>
 <b>{format(day,'EEE dd',{locale:lang==='de'?de:enUS})}</b>
 <div className="timeline">{Array.from({length:24},(_,h)=>
-<i key={h}/>)}{occurrences(day).map(p=>
-<div className="job" key={p.id} style={{left:`${timeMins(p.start_time)/1440*100}%`,width:`${Math.max(p.duration_minutes/1440*100,2.8)}%`,background:p.color}} title={`${p.name} · ${p.start_time} · ${p.duration_minutes} min`}>
+<i key={h}/>)}{isSameDay(day,now)&&<span className="now-line" style={{left:`${nowPosition}%`}} title={`${lang==='de'?'Jetzt':'Now'} · ${format(now,'HH:mm')}`}><b>{format(now,'HH:mm')}</b></span>}{occurrences(day).map(p=>
+<div className={`job ${isPlanRunning(p,day,now)?'running':''}`} key={p.id} style={{left:`${timeMins(p.start_time)/1440*100}%`,width:`${Math.max(p.duration_minutes/1440*100,2.8)}%`,background:p.color}} title={`${p.name} · ${p.start_time} · ${p.duration_minutes} min${isPlanRunning(p,day,now)?` · ${lang==='de'?'läuft jetzt':'running now'}`:''}`}>
 <span>{p.name}</span>
 </div>)}</div>
 </div>)}</div>}{mode==='months'&&<MonthGantt date={date} data={data} names={names}/>} {mode==='agenda'&&<div className="agenda">{days.flatMap(day=>occurrences(day).map(p=>({day,p}))).sort((a,b)=>a.day.getTime()+timeMins(a.p.start_time)-b.day.getTime()-timeMins(b.p.start_time)).map(({day,p})=>
@@ -232,7 +232,7 @@ function MonthGantt({date,data}:any){const start=startOfMonth(date),end=endOfMon
 <b>{p.name}<small>{p.start_time}</small>
 </b>{days.map(d=>
 <span className={[0,6].includes(d.getDay())?'weekend':''} key={d.toISOString()}>{matchesDay(p,d)&&<i style={{background:p.color}}/>}</span>)}</div>)}</div>}
-function matchesDay(p:Plan,d:Date){if(p.schedule_type==='daily')return true;if(p.schedule_type==='weekly')return p.weekdays.includes(d.getDay());if(p.schedule_type==='monthly')return p.day_of_month===d.getDate();return false}function timeMins(x:string){const[h,m]=x.split(':').map(Number);return h*60+m}
+function matchesDay(p:Plan,d:Date){if(p.schedule_type==='daily')return true;if(p.schedule_type==='weekly')return p.weekdays.includes(d.getDay());if(p.schedule_type==='monthly')return p.day_of_month===d.getDate();return false}function timeMins(x:string){const[h,m]=x.split(':').map(Number);return h*60+m}function isPlanRunning(p:Plan,day:Date,now:Date){if(!isSameDay(day,now)||!matchesDay(p,day))return false;const minute=now.getHours()*60+now.getMinutes(),start=timeMins(p.start_time);return minute>=start&&minute<start+p.duration_minutes}
 
 function Settings({data,t,lang,theme,setLang,setTheme,reload,release,setRelease}:any){
  const[tab,setTab]=useState('locations');const[editing,setEditing]=useState<any>(null);const[backups,setBackups]=useState<any>({files:[],folder:''});const h=getHelp(lang);const loadBackups=()=>api('/backups').then(setBackups);useEffect(()=>{loadBackups()},[]);const groups=[['locations',MapPin],['sources',Server],['targets',HardDrive],['datasets',Database],['software',Archive]];

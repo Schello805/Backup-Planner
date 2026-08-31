@@ -135,6 +135,7 @@ td{padding:15px 18px;border-top:1px solid var(--border)}
 .timeline>i{border-left:1px solid var(--border)}
 .job{position:absolute;top:13px;height:38px;border-radius:7px;color:white;box-shadow:0 4px 10px rgba(30,65,125,.15);min-width:33px;padding:0 7px;display:flex;align-items:center;overflow:hidden}
 .job span{font-size:9px;font-weight:700;white-space:nowrap}
+.now-line{position:absolute;z-index:4;top:0;bottom:0;width:2px;background:#ef4444;box-shadow:0 0 0 1px rgba(255,255,255,.55);pointer-events:none}.now-line:after{content:"";position:absolute;top:0;left:50%;transform:translate(-50%,-1px);width:8px;height:8px;border-radius:50%;background:#ef4444}.now-line b{position:absolute;top:3px;left:6px;padding:2px 4px;border-radius:4px;background:#ef4444;color:white;font-size:8px;line-height:1;white-space:nowrap}.job.running{z-index:3;outline:3px solid color-mix(in srgb,#ef4444 75%,white);box-shadow:0 0 0 5px rgba(239,68,68,.14),0 5px 14px rgba(30,65,125,.2);animation:running-pulse 1.8s ease-in-out infinite}@keyframes running-pulse{50%{box-shadow:0 0 0 8px rgba(239,68,68,.05),0 5px 14px rgba(30,65,125,.2)}}
 .month-gantt{font-size:10px}
 .month-head,.month-row{display:grid;grid-template-columns:190px repeat(92,30px);min-width:2950px}
 .month-head>*,.month-row>*{border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-height:44px;display:grid;place-items:center}

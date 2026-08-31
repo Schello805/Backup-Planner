@@ -4,6 +4,13 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-08-31
+
+- Added a live current-time line to today's row in the weekly Gantt diagram.
+- Added the current time label and automatic minute-by-minute movement.
+- Highlighted any planned backup whose start time and duration include the current moment.
+- Kept the live marker hidden when viewing a different week.
+
 ## [0.1.7] - 2026-08-31
 
 - Replaced the flat location list with an expandable hierarchy tree.
