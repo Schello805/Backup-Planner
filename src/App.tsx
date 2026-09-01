@@ -4,6 +4,7 @@ import{Activity,Archive,CalendarDays,Check,ChevronDown,ChevronRight,CircleHelp,D
 import{addDays,addMonths,eachDayOfInterval,endOfMonth,format,isSameDay,startOfMonth,startOfWeek}from'date-fns';import{de,enUS}from'date-fns/locale';
 import{api}from'./api';import{useCopy,type Lang}from'./i18n';import type{AppData,Entity,Plan}from'./types';
 import{getHelp}from'./help';
+import{dependencyStatus,getDownstreamPlans}from'./planDependencies';
 
 type View='dashboard'|'plans'|'schedule'|'settings';
 const blankPlan={name:'',source_id:'',source_target_id:null,target_id:'',software_id:null,dataset_ids:[],protection_type:'backup',schedule_type:'weekly',weekdays:[],day_of_month:1,start_time:'03:00',duration_minutes:30,retention_value:null,retention_unit:'days',version_count:null,immutable:false,encrypted:false,owner:'',color:'#16a36a',notes:'',active:true};
@@ -16,6 +17,7 @@ export default function App(){
  const load=async()=>{try{setError('');setData(await api('/data'))}catch(e:any){setError(e.message)}finally{setLoading(false)}};
  useEffect(()=>{document.documentElement.dataset.theme=theme;localStorage.setItem('theme',theme)},[theme]);useEffect(()=>{localStorage.setItem('language',lang);document.documentElement.lang=lang},[lang]);useEffect(()=>{load();api('/release').then(setRelease).catch(()=>{})},[]);useEffect(()=>{const listener=()=>notify(lang==='de'?'Systemaktion erfolgreich abgeschlossen':'System action completed');window.addEventListener('backup-planner:system-action',listener);return()=>window.removeEventListener('backup-planner:system-action',listener)},[lang]);
  const savePlan=async()=>{try{const editing=!!plan.id;await api(`/plans${plan.id?'/'+plan.id:''}`,{method:plan.id?'PUT':'POST',body:JSON.stringify({...plan,duration_minutes:Number(plan.duration_minutes),day_of_month:plan.day_of_month?Number(plan.day_of_month):null,version_count:plan.version_count?Number(plan.version_count):null,retention_value:plan.retention_value?Number(plan.retention_value):null})});setPlan(null);await load();notify(editing?t('planUpdated'):t('planCreated'))}catch(e:any){setError(e.message);notify(t('actionFailed'),'error')}};
+ const removePlan=async(p:Plan)=>{const affected=data?getDownstreamPlans(p,data.plans):[];const impact=affected.length?(lang==='de'?`\n\nAchtung: ${affected.length} nachgelagerte${affected.length===1?'r Plan hängt':' Pläne hängen'} von dieser Kopie ab: ${affected.map(item=>item.name).join(', ')}.`:`\n\nWarning: ${affected.length} downstream plan${affected.length===1?' depends':'s depend'} on this copy: ${affected.map(item=>item.name).join(', ')}.`):'';if(confirm(`${t('delete')}?${impact}`)){await api(`/plans/${p.id}`,{method:'DELETE'});await load();notify(t('movedToTrash'))}};
  const nav=(next:View)=>{setView(next);if(next==='settings')setPlan(null)};
  if(loading)return <div className="splash">
 <img src="/logo.png"/>
@@ -62,7 +64,7 @@ export default function App(){
 <X/>
 </button>
 </div>}
-   <div className="page">{view==='dashboard'&&data&&<Dashboard data={data} t={t} onStart={()=>nav('settings')}/>} {view==='plans'&&data&&<Plans data={data} t={t} edit={(p:Plan)=>setPlan({...p,immutable:!!p.immutable,encrypted:!!p.encrypted,active:!!p.active})} remove={async (p:Plan)=>{if(confirm(t('delete')+'?')){await api(`/plans/${p.id}`,{method:'DELETE'});await load();notify(t('movedToTrash'))}}}/>} {view==='schedule'&&data&&<Schedule data={data} t={t} lang={lang} edit={(p:Plan)=>setPlan({...p,immutable:!!p.immutable,encrypted:!!p.encrypted,active:!!p.active})}/>} {view==='settings'&&data&&<Settings data={data} t={t} lang={lang} theme={theme} setLang={setLang} setTheme={setTheme} reload={load} release={release} setRelease={setRelease} notify={notify}/>}</div>
+   <div className="page">{view==='dashboard'&&data&&<Dashboard data={data} t={t} onStart={()=>nav('settings')}/>} {view==='plans'&&data&&<Plans data={data} t={t} edit={(p:Plan)=>setPlan({...p,immutable:!!p.immutable,encrypted:!!p.encrypted,active:!!p.active})} remove={removePlan}/>} {view==='schedule'&&data&&<Schedule data={data} t={t} lang={lang} edit={(p:Plan)=>setPlan({...p,immutable:!!p.immutable,encrypted:!!p.encrypted,active:!!p.active})}/>} {view==='settings'&&data&&<Settings data={data} t={t} lang={lang} theme={theme} setLang={setLang} setTheme={setTheme} reload={load} release={release} setRelease={setRelease} notify={notify}/>}</div>
    <footer>
 <span>Backup Planner · v{data?.meta.version}</span>
 <span>·</span>
@@ -176,7 +178,7 @@ function Plans({data,t,edit,remove}:any){const[q,setQ]=useState('');const[type,s
 </div>
 </div>
 </td>
-<td data-label={t('source')}>{sourceName(p)}{p.source_target_id&&<small className="derived-label">{t('derivedCopy')}</small>}</td>
+<td data-label={t('source')}>{sourceName(p)}{p.source_target_id&&<PlanDependencyLabel plan={p} plans={data.plans} t={t}/>}</td>
 <td data-label={t('target')}><span className="target-name"><i style={{background:data.targets.find((x:Entity)=>x.id===p.target_id)?.color||'#3478f6'}}/>{names('targets',p.target_id)}</span></td>
 <td data-label={t('type')}>
 <span className={`badge ${p.protection_type}`}>{t(p.protection_type)}</span>
@@ -195,6 +197,7 @@ function Plans({data,t,edit,remove}:any){const[q,setQ]=useState('');const[type,s
 </tr>)}</tbody>
 </table>
 </div>}</section>}
+function PlanDependencyLabel({plan,plans,t}:{plan:Plan;plans:Plan[];t:any}){const issue=dependencyStatus(plan,plans).issue;return <small className={`derived-label ${issue?'warning':''}`} title={issue?t('issues'):undefined}>{t('derivedCopy')}{issue&&' · !'}</small>}
 function scheduleLabel(p:Plan,t:any){if(p.schedule_type==='manual')return t('manual');if(p.schedule_type==='daily')return `${t('daily')} · ${p.start_time}`;if(p.schedule_type==='monthly')return `${t('monthly')} · ${p.day_of_month} · ${p.start_time}`;return `${p.weekdays.map((d:number)=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ')} · ${p.start_time}`}
 
 function Schedule({data,t,lang,edit}:{data:AppData;t:any;lang:Lang;edit:(plan:Plan)=>void}){const[mode,setMode]=useState<'week'|'months'|'agenda'>('week');const[date,setDate]=useState(new Date());const[now,setNow]=useState(new Date());useEffect(()=>{const timer=window.setInterval(()=>setNow(new Date()),60000);return()=>window.clearInterval(timer)},[]);const names=(key:keyof AppData,id:string)=>(data[key]as Entity[]).find(x=>x.id===id)?.name||'—';const week=startOfWeek(date,{weekStartsOn:1});const days=eachDayOfInterval({start:week,end:addDays(week,6)});const occurrences=(day:Date)=>data.plans.filter(p=>!p.deleted_at&&p.active&&matchesDay(p,day));const nowPosition=(now.getHours()*60+now.getMinutes())/1440*100;const editHint=lang==='de'?'Klicken, um diesen Backup-Plan zu bearbeiten':'Click to edit this backup plan';return <section className="section-card schedule-card">
@@ -358,12 +361,13 @@ function SystemSettings({t,lang,theme,setLang,setTheme,backups,loadBackups,relea
 </div>
 </>}
 
-function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h=getHelp(lang);const[attempted,setAttempted]=useState(false);const[durationUnit,setDurationUnit]=useState<'minutes'|'hours'>(()=>value.duration_minutes>=60&&value.duration_minutes%60===0?'hours':'minutes');const autoName=useRef('');const set=(k:string,v:any)=>setValue({...value,[k]:v});const sourceValue=value.source_target_id?`target:${value.source_target_id}`:value.source_id?`source:${value.source_id}`:'';const availableAtTarget=new Set(data.dataset_availability.filter((a:any)=>a.node_type==='target'&&a.node_id===value.source_target_id).map((a:any)=>a.dataset_id));const datasets=data.datasets.filter((d:Entity)=>d.active&&(value.source_target_id?availableAtTarget.has(d.id):d.source_id===value.source_id));const targetSourceIds=new Set(data.dataset_availability.filter((a:any)=>a.node_type==='target').map((a:any)=>a.node_id));const sourceOptions=[...data.sources.filter((x:Entity)=>x.active).map((x:Entity)=>({value:`source:${x.id}`,label:x.name})),...data.targets.filter((x:Entity)=>x.active&&targetSourceIds.has(x.id)).map((x:Entity)=>({value:`target:${x.id}`,label:`${x.name} · ${t('availableCopy')}`}))];const chooseSource=(ref:string)=>{if(!ref)return setValue({...value,source_id:'',source_target_id:null,dataset_ids:[]});const[type,nodeId]=ref.split(':');if(type==='source')return setValue({...value,source_id:nodeId,source_target_id:null,dataset_ids:[]});const firstAvailability=data.dataset_availability.find((a:any)=>a.node_type==='target'&&a.node_id===nodeId);const firstDataset=data.datasets.find((d:Entity)=>d.id===firstAvailability?.dataset_id);setValue({...value,source_id:firstDataset?.source_id||'',source_target_id:nodeId,dataset_ids:[]})};const sourceName=sourceOptions.find((x:any)=>x.value===sourceValue)?.label?.split(' · ')[0]||'';const targetName=data.targets.find((x:Entity)=>x.id===value.target_id)?.name||'';const datasetName=data.datasets.find((x:Entity)=>x.id===value.dataset_ids[0])?.name||'';const suggestion=[sourceName&&targetName?`${sourceName} → ${targetName}`:'',datasetName].filter(Boolean).join(' · ');useEffect(()=>{if(suggestion&&(!value.name||value.name===autoName.current)){autoName.current=suggestion;setValue({...value,name:suggestion})}},[suggestion]);const durationValue=durationUnit==='hours'?value.duration_minutes/60:value.duration_minutes;return <Modal title={value.id?t('edit'):t('newPlan')} close={()=>setValue(null)}>
+function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h=getHelp(lang);const[attempted,setAttempted]=useState(false);const[durationUnit,setDurationUnit]=useState<'minutes'|'hours'>(()=>value.duration_minutes>=60&&value.duration_minutes%60===0?'hours':'minutes');const autoName=useRef('');const set=(k:string,v:any)=>setValue({...value,[k]:v});const sourceValue=value.source_target_id?`target:${value.source_target_id}`:value.source_id?`source:${value.source_id}`:'';const availableAtTarget=new Set(data.dataset_availability.filter((a:any)=>a.node_type==='target'&&a.node_id===value.source_target_id).map((a:any)=>a.dataset_id));const datasets=data.datasets.filter((d:Entity)=>d.active&&(value.source_target_id?availableAtTarget.has(d.id):d.source_id===value.source_id));const targetSourceIds=new Set(data.dataset_availability.filter((a:any)=>a.node_type==='target').map((a:any)=>a.node_id));const sourceOptions=[...data.sources.filter((x:Entity)=>x.active).map((x:Entity)=>({value:`source:${x.id}`,label:x.name})),...data.targets.filter((x:Entity)=>x.active&&targetSourceIds.has(x.id)).map((x:Entity)=>({value:`target:${x.id}`,label:`${x.name} · ${t('availableCopy')}`}))];const chooseSource=(ref:string)=>{if(!ref)return setValue({...value,source_id:'',source_target_id:null,dataset_ids:[]});const[type,nodeId]=ref.split(':');if(type==='source')return setValue({...value,source_id:nodeId,source_target_id:null,dataset_ids:[]});const firstAvailability=data.dataset_availability.find((a:any)=>a.node_type==='target'&&a.node_id===nodeId);const firstDataset=data.datasets.find((d:Entity)=>d.id===firstAvailability?.dataset_id);setValue({...value,source_id:firstDataset?.source_id||'',source_target_id:nodeId,dataset_ids:[]})};const sourceName=sourceOptions.find((x:any)=>x.value===sourceValue)?.label?.split(' · ')[0]||'';const targetName=data.targets.find((x:Entity)=>x.id===value.target_id)?.name||'';const datasetName=data.datasets.find((x:Entity)=>x.id===value.dataset_ids[0])?.name||'';const suggestion=[sourceName&&targetName?`${sourceName} → ${targetName}`:'',datasetName].filter(Boolean).join(' · ');useEffect(()=>{if(suggestion&&(!value.name||value.name===autoName.current)){autoName.current=suggestion;setValue({...value,name:suggestion})}},[suggestion]);const durationValue=durationUnit==='hours'?value.duration_minutes/60:value.duration_minutes;const dependency=dependencyStatus(value as Plan,data.plans);const downstream=value.id?getDownstreamPlans(value as Plan,data.plans):[];const section=(en:string,de:string)=>lang==='de'?de:en;return <Modal title={value.id?t('edit'):t('newPlan')} close={()=>setValue(null)}>
 <div className="form-grid">
 <Field label={t('name')} help={h.name} wide>
 <input value={value.name} onChange={e=>set('name',e.target.value)} autoFocus/>
 {suggestion&&value.name!==suggestion&&<button type="button" className="name-suggestion" onClick={()=>{autoName.current=suggestion;set('name',suggestion)}}>{t('useSuggestedName')}: <b>{suggestion}</b></button>}
 </Field>
+<FormSection title={section('Data path','Datenweg')} text={section('Choose where the data comes from, what is protected, and where the copy is stored.','Lege fest, woher die Daten kommen, was geschützt wird und wo die Kopie liegt.')}/>
 <Field label={t('source')} help={h.planSource}>
 <select value={sourceValue} onChange={e=>chooseSource(e.target.value)}><option value="">Select…</option>{sourceOptions.map((option:any)=><option key={option.value} value={option.value}>{option.label}</option>)}</select>
 </Field>
@@ -378,6 +382,9 @@ function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h
     <label key={d.id}><input type="checkbox" checked={value.dataset_ids.includes(d.id)} onChange={e=>set('dataset_ids',e.target.checked?[...value.dataset_ids,d.id]:value.dataset_ids.filter((x:string)=>x!==d.id))}/><span><b>{d.name}</b><small>{t(d.priority)}</small></span></label>)}</div>}
   {attempted&&value.dataset_ids.length===0&&datasets.length>0&&<p className="field-error"><TriangleAlert/>{h.selectOne}</p>}
 </Field>
+{value.source_target_id&&value.dataset_ids.length>0&&<DependencyNotice status={dependency} lang={lang}/>}
+{downstream.length>0&&<div className={`dependency-impact wide ${!value.active?'danger':''}`}><Activity/><div><b>{section(`${downstream.length} downstream plan${downstream.length===1?'':'s'} depend on this copy`,`${downstream.length} nachgelagerte${downstream.length===1?'r Plan hängt':' Pläne hängen'} von dieser Kopie ab`)}</b><span>{downstream.map((item:Plan)=>item.name).join(', ')}</span>{!value.active&&<strong>{section('Deactivating this plan interrupts these protection chains.','Das Deaktivieren dieses Plans unterbricht diese Sicherungsketten.')}</strong>}</div></div>}
+<FormSection title={section('Protection','Schutz')} text={section('Define the copy type and the software responsible for creating it.','Bestimme die Art der Kopie und die dafür verwendete Software.')}/>
 <Field label={t('type')} help={h.protectionType}>
 <select value={value.protection_type} onChange={e=>{const next=e.target.value;setValue({...value,protection_type:next,color:next==='backup'?'#16a36a':next==='synchronization'?'#3478f6':'#7c5ce7'})}}>
 <option value="backup">{t('backup')}</option>
@@ -388,6 +395,7 @@ function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h
 <Field label={t('software')} help={h.planSoftware}>
 <Select empty value={value.software_id||''} onChange={(v:string)=>set('software_id',v||null)} options={data.software}/>
 </Field>
+<FormSection title={section('Schedule','Zeitplan')} text={section('Plan when the job starts and how long it normally takes.','Plane, wann der Auftrag startet und wie lange er üblicherweise dauert.')}/>
 <Field label={t('timing')} help={h.schedule}>
 <select value={value.schedule_type} onChange={e=>set('schedule_type',e.target.value)}>
 <option value="daily">{t('daily')}</option>
@@ -409,6 +417,7 @@ function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h
 <select value={durationUnit} onChange={e=>setDurationUnit(e.target.value as 'minutes'|'hours')} aria-label={t('duration')}><option value="minutes">{t('minutes')}</option><option value="hours">{lang==='de'?'Stunden':'Hours'}</option></select>
 </div>
 </Field>
+<FormSection title={section('Retention & responsibility','Aufbewahrung & Verantwortung')} text={section('Document how long copies remain available and who takes care of this plan.','Dokumentiere, wie lange Kopien verfügbar bleiben und wer diesen Plan betreut.')}/>
 <Field label={t('versions')} help={h.versions}>
 <input type="number" min="1" value={value.version_count||''} onChange={e=>set('version_count',e.target.value)}/>
 </Field>
@@ -418,6 +427,7 @@ function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h
 <Field label={t('owner')} help={h.owner}>
 <input value={value.owner} onChange={e=>set('owner',e.target.value)}/>
 </Field>
+<FormSection title={section('Notes & safety','Notizen & Sicherheit')} text={section('Add context and record technical protection properties.','Ergänze Hinweise und dokumentiere technische Schutzeigenschaften.')}/>
 <Field label={t('notes')} help={h.notes} wide>
 <textarea value={value.notes} onChange={e=>set('notes',e.target.value)}/>
 </Field>
@@ -437,6 +447,9 @@ function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h
 </div>
 <ModalActions t={t} close={()=>setValue(null)} save={()=>{setAttempted(true);if(value.dataset_ids.length>0&&(value.schedule_type!=='weekly'||value.weekdays.length>0))save()}}/>
 </Modal>}
+
+function FormSection({title,text}:{title:string;text:string}){return <div className="form-section-title wide"><div><b>{title}</b><span>{text}</span></div></div>}
+function DependencyNotice({status,lang}:{status:ReturnType<typeof dependencyStatus>;lang:Lang}){const de=lang==='de';const copy=status.issue==='missing'?[de?'Vorgelagerter Plan fehlt':'Upstream plan is missing',de?'Die gewählten Daten erreichen diese Quelle derzeit nicht zuverlässig. Erstelle oder aktiviere zuerst einen Plan zu diesem Ziel.':'The selected data does not currently reach this source reliably. Create or activate a plan to this target first.']:status.issue==='inactive'?[de?'Vorgelagerter Plan ist deaktiviert':'Upstream plan is inactive',de?`${status.upstream?.name} muss aktiviert werden, damit dieser Folgeschritt Daten erhält.`:`${status.upstream?.name} must be active for this downstream step to receive data.`]:status.issue==='manual'?[de?'Manueller vorgelagerter Plan':'Manual upstream plan',de?`${status.upstream?.name} muss vor diesem Plan manuell ausgeführt werden.`:`${status.upstream?.name} must be run manually before this plan.`]:status.issue==='timing'?[de?'Reihenfolge ist nicht sichergestellt':'Execution order is not guaranteed',de?`${status.upstream?.name} endet möglicherweise nicht vor diesem Plan. Passe Tage, Startzeit oder Dauer an.`:`${status.upstream?.name} may not finish before this plan. Adjust days, start times, or duration.`]:[de?'Abhängigkeit ist plausibel':'Dependency looks good',de?`${status.upstream?.name} ist aktiv und soll vor diesem Folgeschritt enden.`:`${status.upstream?.name} is active and scheduled to finish before this downstream step.`];return <div className={`dependency-notice wide ${status.issue?'warning':'ok'}`}>{status.issue?<TriangleAlert/>:<Check/>}<div><b>{copy[0]}</b><span>{copy[1]}</span></div></div>}
 
 function EntityModal({tab,value,setValue,data,t,lang,save}:any){const h=getHelp(lang);const set=(k:string,v:any)=>setValue({...value,[k]:v});return <Modal title={`${value.id?t('edit'):t('add')} · ${t(tab==='datasets'?'dataSets':tab==='software'?'softwareList':tab)}`} close={()=>setValue(null)}>
 <div className="form-grid">

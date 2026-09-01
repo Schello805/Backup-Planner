@@ -4,6 +4,14 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.13] - 2026-09-01
+
+- Reorganized the backup-plan form into five concise, explanatory sections.
+- Added upstream dependency checks for missing, inactive, manual, or badly timed plans.
+- Added downstream impact warnings while editing, deactivating, or deleting an upstream plan.
+- Marked broken dependencies directly in the backup-plan overview.
+- Extracted dependency analysis into a dedicated module with automated tests.
+
 ## [0.1.12] - 2026-08-31
 
 - Made weekly Gantt bars directly open their backup plan for editing.

@@ -10,6 +10,8 @@ Locations are stored as parent-linked records and rendered as an expandable tree
 
 The weekly Gantt view derives its live state entirely in the browser from the planned start time and duration. A minute timer moves the current-time marker without writing data or triggering backup software.
 
+Backup-chain dependency and schedule-order analysis is isolated in `src/planDependencies.ts`. Keeping this logic independent from React makes it reusable by the plan overview and editor and directly testable with Vitest.
+
 The score is calculated per dataset: real backup (30), three copies (20), two locations (15), off-primary-site copy (10), two media types (10), immutable copy (10), and retention/versioning (5). Overall results weight low, normal, and high priority datasets by 1, 2, and 4.
 
 Server endpoints validate plan payloads, use prepared SQLite statements, and perform restore operations transactionally. SQLite runs in WAL mode with foreign keys enabled.
