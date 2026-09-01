@@ -4,6 +4,15 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.14] - 2026-09-01
+
+- Added a validated import preview with record counts, version, creation date, warnings, and blocking errors.
+- Restricted restored database columns to a known allowlist and validate references before replacing current data.
+- Added schedule-conflict detection for overlapping jobs on the same source or target.
+- Made conflict entries open either affected plan directly from the schedule.
+- Made target nodes in dashboard protection paths open their backup plan for editing.
+- Added automated import-validation and schedule-conflict tests.
+
 ## [0.1.13] - 2026-09-01
 
 - Reorganized the backup-plan form into five concise, explanatory sections.
