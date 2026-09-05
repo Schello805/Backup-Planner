@@ -5,7 +5,7 @@ import{addDays,addMonths,eachDayOfInterval,endOfMonth,format,isSameDay,startOfMo
 import{api}from'./api';import{useCopy,type Lang}from'./i18n';import type{AppData,Entity,Plan}from'./types';
 import{getHelp}from'./help';
 import{dependencyStatus,getDownstreamPlans}from'./planDependencies';
-import{findScheduleConflicts,type ScheduleConflict}from'./scheduleConflicts';
+import{assignPlanLanes,findScheduleConflicts,type ScheduleConflict}from'./scheduleConflicts';
 
 type View='dashboard'|'plans'|'schedule'|'settings';
 const blankPlan={name:'',source_id:'',source_target_id:null,target_id:'',software_id:null,dataset_ids:[],protection_type:'backup',schedule_type:'weekly',weekdays:[],day_of_month:1,start_time:'03:00',duration_minutes:30,retention_value:null,retention_unit:'days',version_count:null,immutable:false,encrypted:false,owner:'',color:'#16a36a',notes:'',active:true};
@@ -214,15 +214,7 @@ function Schedule({data,t,lang,edit}:{data:AppData;t:any;lang:Lang;edit:(plan:Pl
 <div className="gantt-head">
 <b>
 </b>{Array.from({length:24},(_,h)=>
-<span key={h}>{String(h).padStart(2,'0')}</span>)}</div>{days.map(day=>
-<div className="gantt-row" key={day.toISOString()}>
-<b>{format(day,'EEE dd',{locale:lang==='de'?de:enUS})}</b>
-<div className="timeline">{Array.from({length:24},(_,h)=>
-<i key={h}/>)}{isSameDay(day,now)&&<span className="now-line" style={{left:`${nowPosition}%`}} title={`${lang==='de'?'Jetzt':'Now'} · ${format(now,'HH:mm')}`}><b>{format(now,'HH:mm')}</b></span>}{occurrences(day).map(p=>
-<button type="button" className={`job ${isPlanRunning(p,day,now)?'running':''}`} onClick={()=>edit(p)} key={p.id} style={{left:`${timeMins(p.start_time)/1440*100}%`,width:`${Math.max(p.duration_minutes/1440*100,2.8)}%`,background:p.color}} title={`${p.name} · ${p.start_time} · ${p.duration_minutes} min${isPlanRunning(p,day,now)?` · ${lang==='de'?'läuft jetzt':'running now'}`:''} · ${editHint}`} aria-label={`${p.name} · ${editHint}`}>
-<span>{p.name}</span>
-</button>)}</div>
-</div>)}</div>}{mode==='months'&&<MonthGantt date={date} data={data} edit={edit} editHint={editHint}/>} {mode==='agenda'&&<div className="agenda">{days.flatMap(day=>occurrences(day).map(p=>({day,p}))).sort((a,b)=>a.day.getTime()+timeMins(a.p.start_time)-b.day.getTime()-timeMins(b.p.start_time)).map(({day,p})=>
+<span key={h}>{String(h).padStart(2,'0')}</span>)}</div>{days.map(day=><DayScheduleRow key={day.toISOString()} day={day} plans={occurrences(day)} now={now} nowPosition={nowPosition} lang={lang} edit={edit} editHint={editHint} conflicts={conflicts}/>)}</div>}{mode==='months'&&<MonthGantt date={date} data={data} edit={edit} editHint={editHint}/>} {mode==='agenda'&&<div className="agenda">{days.flatMap(day=>occurrences(day).map(p=>({day,p}))).sort((a,b)=>a.day.getTime()+timeMins(a.p.start_time)-b.day.getTime()-timeMins(b.p.start_time)).map(({day,p})=>
 <button type="button" className="agenda-item" onClick={()=>edit(p)} title={editHint} key={day.toISOString()+p.id}>
 <time>{format(day,'EEE, d MMM',{locale:lang==='de'?de:enUS})}<b>{p.start_time}</b>
 </time>
@@ -566,3 +558,5 @@ function Select({value,onChange,options,empty=false}:any){return <select value={
 <option key={x.id} value={x.id}>{x.name}</option>)}</select>}
 function Empty({icon,text}:any){return <div className="empty">{icon}<p>{text}</p>
 </div>}
+
+function DayScheduleRow({day,plans,now,nowPosition,lang,edit,editHint,conflicts}:{day:Date;plans:Plan[];now:Date;nowPosition:number;lang:Lang;edit:(plan:Plan)=>void;editHint:string;conflicts:ScheduleConflict[]}){const layout=assignPlanLanes(plans);const planIds=new Set(plans.map(plan=>plan.id));const relevant=conflicts.filter(conflict=>planIds.has(conflict.first.id)&&planIds.has(conflict.second.id));const conflictFor=(plan:Plan)=>relevant.filter(conflict=>conflict.first.id===plan.id||conflict.second.id===plan.id);return <div className="gantt-row" style={{'--lane-count':layout.laneCount}as React.CSSProperties}><b>{format(day,'EEE dd',{locale:lang==='de'?de:enUS})}</b><div className="timeline">{Array.from({length:24},(_,hour)=><i key={hour}/>)}{isSameDay(day,now)&&<span className="now-line" style={{left:`${nowPosition}%`}} title={`${lang==='de'?'Jetzt':'Now'} · ${format(now,'HH:mm')}`}><b>{format(now,'HH:mm')}</b></span>}{layout.items.map(({plan,lane})=>{const planConflicts=conflictFor(plan);const conflictText=planConflicts.map(conflict=>{const other=conflict.first.id===plan.id?conflict.second:conflict.first;const resources=conflict.resources.map(resource=>resource==='source'?(lang==='de'?'Quelle':'source'):(lang==='de'?'Ziel':'target')).join(' & ');return`${other.name} (${resources})`}).join(', ');return <button type="button" className={`job ${isPlanRunning(plan,day,now)?'running':''} ${planConflicts.length?'has-conflict':''}`} onClick={()=>edit(plan)} key={plan.id} style={{left:`${timeMins(plan.start_time)/1440*100}%`,width:`${Math.max(plan.duration_minutes/1440*100,2.8)}%`,top:`${10+lane*42}px`,background:plan.color}} title={`${plan.name} · ${plan.start_time} · ${plan.duration_minutes} min${isPlanRunning(plan,day,now)?` · ${lang==='de'?'läuft jetzt':'running now'}`:''}${conflictText?` · ${lang==='de'?'Konflikt mit':'Conflict with'} ${conflictText}`:''} · ${editHint}`} aria-label={`${plan.name} · ${editHint}`}><span>{plan.name}</span>{planConflicts.length>0&&<TriangleAlert className="job-conflict-icon"/>}</button>})}</div></div>}

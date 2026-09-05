@@ -14,6 +14,8 @@ Backup-chain dependency and schedule-order analysis is isolated in `src/planDepe
 
 Potential resource overlaps are calculated client-side in `src/scheduleConflicts.ts`. Import files are validated server-side by `server/importValidation.ts` before the transactional restore begins; restoration only accepts explicitly allowlisted database columns.
 
+The weekly Gantt uses a greedy interval-partitioning algorithm from the same schedule module. It assigns the earliest reusable lane to each plan, preventing visual overlap while keeping each day row as compact as its schedule permits.
+
 The score is calculated per dataset: real backup (30), three copies (20), two locations (15), off-primary-site copy (10), two media types (10), immutable copy (10), and retention/versioning (5). Overall results weight low, normal, and high priority datasets by 1, 2, and 4.
 
 Server endpoints validate plan payloads, use prepared SQLite statements, and perform restore operations transactionally. SQLite runs in WAL mode with foreign keys enabled.

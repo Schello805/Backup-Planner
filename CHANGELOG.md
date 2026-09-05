@@ -4,6 +4,14 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.15] - 2026-09-05
+
+- Added automatic Gantt lanes so overlapping backup bars remain fully readable.
+- Expanded only affected day rows while preserving the compact single-lane layout.
+- Reused freed lanes to keep dense schedules as short as possible.
+- Marked genuine same-source or same-target conflicts with an orange border and warning icon.
+- Added conflict details to plan tooltips and automated lane-allocation tests.
+
 ## [0.1.14] - 2026-09-01
 
 - Added a validated import preview with record counts, version, creation date, warnings, and blocking errors.

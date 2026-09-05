@@ -1,6 +1,9 @@
 import type{Plan}from'./types';
 export type ScheduleConflict={first:Plan;second:Plan;resources:Array<'source'|'target'>};
+export type PlanLane={plan:Plan;lane:number};
 const minutes=(time:string)=>{const[h,m]=time.split(':').map(Number);return h*60+m};
 export function findScheduleConflicts(plans:Plan[]):ScheduleConflict[]{const active=plans.filter(plan=>plan.active&&!plan.deleted_at&&plan.schedule_type!=='manual');const conflicts:ScheduleConflict[]=[];for(let i=0;i<active.length;i++)for(let j=i+1;j<active.length;j++){const first=active[i],second=active[j];if(!canOccurTogether(first,second)||!timesOverlap(first,second))continue;const resources:Array<'source'|'target'>=[];if((first.source_target_id||first.source_id)===(second.source_target_id||second.source_id))resources.push('source');if(first.target_id===second.target_id)resources.push('target');if(resources.length)conflicts.push({first,second,resources})}return conflicts}
 function timesOverlap(a:Plan,b:Plan){const aStart=minutes(a.start_time),bStart=minutes(b.start_time);return aStart<bStart+b.duration_minutes&&bStart<aStart+a.duration_minutes}
 function canOccurTogether(a:Plan,b:Plan){if(a.schedule_type==='daily'||b.schedule_type==='daily')return true;if(a.schedule_type==='weekly'&&b.schedule_type==='weekly')return a.weekdays.some(day=>b.weekdays.includes(day));if(a.schedule_type==='monthly'&&b.schedule_type==='monthly')return a.day_of_month===b.day_of_month;return true}
+
+export function assignPlanLanes(plans:Plan[]):{items:PlanLane[];laneCount:number}{const laneEnds:number[]=[];const items=[...plans].sort((a,b)=>minutes(a.start_time)-minutes(b.start_time)||b.duration_minutes-a.duration_minutes).map(plan=>{const start=minutes(plan.start_time);let lane=laneEnds.findIndex(end=>end<=start);if(lane<0)lane=laneEnds.length;laneEnds[lane]=start+plan.duration_minutes;return{plan,lane}});return{items,laneCount:Math.max(1,laneEnds.length)}}
