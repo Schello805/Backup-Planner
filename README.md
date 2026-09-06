@@ -13,6 +13,7 @@ Backup Planner is a self-hosted web application for planning, visualizing, and i
 - interactive week Gantt with a live current-time marker, editable three-month timeline, and agenda
 - schedule-conflict detection for overlapping jobs on the same source or target
 - automatic multi-lane Gantt layout for readable overlapping backup plans
+- compact, alternating day rows for easier visual tracking across the weekly schedule
 - full master-data management for sources, targets, datasets, locations, and software
 - expandable location hierarchy for sites, buildings, and rooms
 - English and German interface, light and dark themes

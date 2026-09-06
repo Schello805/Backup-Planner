@@ -4,6 +4,11 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.16] - 2026-09-06
+
+- Reduced weekly Gantt row and backup-bar heights for a denser schedule overview.
+- Added subtle alternating day backgrounds to make adjacent weekdays easier to distinguish.
+
 ## [0.1.15] - 2026-09-05
 
 - Added automatic Gantt lanes so overlapping backup bars remain fully readable.
