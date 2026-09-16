@@ -4,6 +4,10 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.17] - 2026-09-16
+
+- Fixed backup plan deletion returning 400 Bad Request on empty request bodies.
+
 ## [0.1.16] - 2026-09-06
 
 - Reduced weekly Gantt row and backup-bar heights for a denser schedule overview.
