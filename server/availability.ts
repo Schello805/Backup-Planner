@@ -8,6 +8,16 @@ export type DatasetAvailability = {
   via_plan_id: string | null;
 };
 
+export function getReachablePlans(data: { datasets: unknown[]; plans: unknown[] }, datasetId: string): Row[] {
+  const availability = calculateAvailability(data);
+  const available = new Set(availability.filter(item => item.dataset_id === datasetId).map(item => `${item.node_type}:${item.node_id}`));
+  return (data.plans as Row[]).filter(plan => {
+    if (!plan.active || plan.deleted_at || !(plan.dataset_ids || []).includes(datasetId)) return false;
+    const source = plan.source_target_id ? `target:${plan.source_target_id}` : `source:${plan.source_id}`;
+    return available.has(source) && availability.some(item => item.dataset_id === datasetId && item.node_type === 'target' && item.node_id === plan.target_id);
+  });
+}
+
 export function calculateAvailability(data: { datasets: unknown[]; plans: unknown[] }): DatasetAvailability[] {
   const available = new Map<string, DatasetAvailability>();
   const key = (datasetId: string, nodeType: string, nodeId: string) => `${datasetId}:${nodeType}:${nodeId}`;

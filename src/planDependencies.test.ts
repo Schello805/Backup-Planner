@@ -1,5 +1,5 @@
 import{describe,expect,it}from'vitest';
-import{dependencyStatus,getDownstreamPlans}from'./planDependencies.js';
+import{dependencyStatus,getDownstreamPlans,getUpstreamPlans}from'./planDependencies.js';
 import type{Plan}from'./types.js';
 
 const plan=(overrides:Partial<Plan>):Plan=>({id:'plan',name:'Plan',active:1,source_id:'source',source_target_id:null,target_id:'target',dataset_ids:['photos'],protection_type:'backup',schedule_type:'daily',weekdays:[],day_of_month:1,start_time:'03:00',duration_minutes:30,immutable:false,encrypted:false,owner:'',color:'#16a36a',...overrides});
@@ -23,5 +23,19 @@ describe('backup plan dependencies',()=>{
   const upstream=plan({id:'upstream',target_id:'qnap4'});
   const downstream=plan({id:'downstream',source_target_id:'qnap4',target_id:'usb'});
   expect(getDownstreamPlans(upstream,[upstream,downstream]).map(item=>item.id)).toEqual(['downstream']);
+ });
+
+ it('accepts a healthy upstream when another candidate is inactive',()=>{
+  const inactive=plan({id:'inactive',target_id:'qnap4',active:0});
+  const healthy=plan({id:'healthy',target_id:'qnap4',start_time:'02:00'});
+  const downstream=plan({id:'downstream',source_target_id:'qnap4',target_id:'usb',start_time:'03:00'});
+  expect(getUpstreamPlans(downstream,[inactive,healthy,downstream]).map(item=>item.id)).toEqual(['inactive','healthy']);
+  expect(dependencyStatus(downstream,[inactive,healthy,downstream])).toEqual({upstream:healthy,issue:null});
+ });
+
+ it('handles an upstream weekly run that finishes after midnight',()=>{
+  const upstream=plan({id:'upstream',target_id:'qnap4',schedule_type:'weekly',weekdays:[0],start_time:'23:30',duration_minutes:60});
+  const downstream=plan({id:'downstream',source_target_id:'qnap4',target_id:'usb',schedule_type:'weekly',weekdays:[1],start_time:'00:45'});
+  expect(dependencyStatus(downstream,[upstream,downstream])).toEqual({upstream,issue:null});
  });
 });

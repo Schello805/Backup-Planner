@@ -6,9 +6,13 @@ export type DependencyStatus={upstream:Plan|null;issue:DependencyIssue|null};
 const minutes=(time:string)=>{const[hours,mins]=time.split(':').map(Number);return hours*60+mins};
 const overlaps=(a:Plan,b:Plan)=>a.dataset_ids.some(id=>b.dataset_ids.includes(id));
 
+export function getUpstreamPlans(plan:Plan,plans:Plan[]):Plan[]{
+ if(!plan.source_target_id)return [];
+ return plans.filter(candidate=>candidate.id!==plan.id&&!candidate.deleted_at&&candidate.target_id===plan.source_target_id&&overlaps(candidate,plan));
+}
+
 export function getUpstreamPlan(plan:Plan,plans:Plan[]):Plan|null{
- if(!plan.source_target_id)return null;
- return plans.find(candidate=>candidate.id!==plan.id&&!candidate.deleted_at&&candidate.target_id===plan.source_target_id&&overlaps(candidate,plan))||null;
+ return getUpstreamPlans(plan,plans)[0]||null;
 }
 
 export function getDownstreamPlans(plan:Plan,plans:Plan[]):Plan[]{
@@ -17,19 +21,37 @@ export function getDownstreamPlans(plan:Plan,plans:Plan[]):Plan[]{
 
 export function dependencyStatus(plan:Plan,plans:Plan[]):DependencyStatus{
  if(!plan.source_target_id)return{upstream:null,issue:null};
- const upstream=getUpstreamPlan(plan,plans);
- if(!upstream)return{upstream:null,issue:'missing'};
- if(!upstream.active)return{upstream,issue:'inactive'};
- if(upstream.schedule_type==='manual')return{upstream,issue:'manual'};
- if(plan.schedule_type==='manual')return{upstream,issue:null};
- if(!scheduleCovers(upstream,plan)||minutes(upstream.start_time)+upstream.duration_minutes>minutes(plan.start_time))return{upstream,issue:'timing'};
- return{upstream,issue:null};
+ const upstreams=getUpstreamPlans(plan,plans);
+ if(!upstreams.length)return{upstream:null,issue:'missing'};
+ const active=upstreams.filter(upstream=>upstream.active);
+ if(!active.length)return{upstream:upstreams[0],issue:'inactive'};
+ if(plan.schedule_type==='manual')return{upstream:active[0],issue:null};
+ const scheduled=active.find(upstream=>upstream.schedule_type!=='manual'&&scheduleCovers(upstream,plan)&&finishesBefore(upstream,plan));
+ if(scheduled)return{upstream:scheduled,issue:null};
+ if(active.some(upstream=>upstream.schedule_type==='manual'))return{upstream:active.find(upstream=>upstream.schedule_type==='manual')||active[0],issue:'manual'};
+ return{upstream:active[0],issue:'timing'};
 }
 
 function scheduleCovers(upstream:Plan,downstream:Plan){
  if(upstream.schedule_type==='daily')return true;
  if(upstream.schedule_type!==downstream.schedule_type)return false;
- if(upstream.schedule_type==='weekly')return downstream.weekdays.every(day=>upstream.weekdays.includes(day));
+ if(upstream.schedule_type==='weekly')return downstream.weekdays.every(day=>upstream.weekdays.includes(day)||(upstream.weekdays.includes((day+6)%7)&&minutes(upstream.start_time)+upstream.duration_minutes>1440));
  if(upstream.schedule_type==='monthly')return upstream.day_of_month===downstream.day_of_month;
  return false;
+}
+
+function finishesBefore(upstream:Plan,downstream:Plan){
+ const downstreamStart=minutes(downstream.start_time);
+ if(upstream.schedule_type==='monthly')return minutes(upstream.start_time)+upstream.duration_minutes<=downstreamStart;
+ if(downstream.schedule_type==='daily')return minutes(upstream.start_time)+upstream.duration_minutes<=downstreamStart;
+ const days=downstream.schedule_type==='weekly'?downstream.weekdays:[0,1,2,3,4,5,6];
+ return days.every(day=>{
+  const candidates=Array.from({length:8},(_,offset)=>offset).filter(offset=>{
+   const upstreamDay=(day-offset+7)%7;
+   return upstream.schedule_type==='daily'||(upstream.schedule_type==='weekly'&&upstream.weekdays.includes(upstreamDay));
+  });
+  const offset=candidates[0];
+  if(offset===undefined)return false;
+  return minutes(upstream.start_time)+upstream.duration_minutes<=downstreamStart+offset*1440;
+ });
 }
