@@ -3,7 +3,7 @@ import type {Plan} from './types';
 export type DependencyIssue='missing'|'inactive'|'manual'|'timing';
 export type DependencyStatus={upstream:Plan|null;issue:DependencyIssue|null};
 
-const minutes=(time:string)=>{const[hours,mins]=time.split(':').map(Number);return hours*60+mins};
+import{DAY_MINUTES,planEndMinutes,planStartMinutes}from'./scheduleTime';
 const overlaps=(a:Plan,b:Plan)=>a.dataset_ids.some(id=>b.dataset_ids.includes(id));
 
 export function getUpstreamPlans(plan:Plan,plans:Plan[]):Plan[]{
@@ -35,15 +35,15 @@ export function dependencyStatus(plan:Plan,plans:Plan[]):DependencyStatus{
 function scheduleCovers(upstream:Plan,downstream:Plan){
  if(upstream.schedule_type==='daily')return true;
  if(upstream.schedule_type!==downstream.schedule_type)return false;
- if(upstream.schedule_type==='weekly')return downstream.weekdays.every(day=>upstream.weekdays.includes(day)||(upstream.weekdays.includes((day+6)%7)&&minutes(upstream.start_time)+upstream.duration_minutes>1440));
+ if(upstream.schedule_type==='weekly')return downstream.weekdays.every(day=>upstream.weekdays.includes(day)||(upstream.weekdays.includes((day+6)%7)&&planEndMinutes(upstream)>DAY_MINUTES));
  if(upstream.schedule_type==='monthly')return upstream.day_of_month===downstream.day_of_month;
  return false;
 }
 
 function finishesBefore(upstream:Plan,downstream:Plan){
- const downstreamStart=minutes(downstream.start_time);
- if(upstream.schedule_type==='monthly')return minutes(upstream.start_time)+upstream.duration_minutes<=downstreamStart;
- if(downstream.schedule_type==='daily')return minutes(upstream.start_time)+upstream.duration_minutes<=downstreamStart;
+ const downstreamStart=planStartMinutes(downstream);
+ if(upstream.schedule_type==='monthly')return planEndMinutes(upstream)<=downstreamStart;
+ if(downstream.schedule_type==='daily')return planEndMinutes(upstream)<=downstreamStart;
  const days=downstream.schedule_type==='weekly'?downstream.weekdays:[0,1,2,3,4,5,6];
  return days.every(day=>{
   const candidates=Array.from({length:8},(_,offset)=>offset).filter(offset=>{
@@ -52,6 +52,6 @@ function finishesBefore(upstream:Plan,downstream:Plan){
   });
   const offset=candidates[0];
   if(offset===undefined)return false;
-  return minutes(upstream.start_time)+upstream.duration_minutes<=downstreamStart+offset*1440;
+    return planEndMinutes(upstream)<=downstreamStart+offset*DAY_MINUTES;
  });
 }

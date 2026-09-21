@@ -1,5 +1,5 @@
 type Row=Record<string,any>;
-import {getReachablePlans} from './availability.js';
+import {calculateAvailability,getReachablePlans} from './availability.js';
 const weights={low:1,normal:2,high:4};
 
 function ancestors(id:string|null, byId:Map<string,Row>){const result:string[]=[];let current=id;while(current&&byId.has(current)){result.push(current);current=byId.get(current)?.parent_id||null;}return result;}
@@ -9,8 +9,9 @@ export function scoreStrategy(data:ReturnType<typeof import('./db.js').listAll>)
   const locations=new Map((data.locations as Row[]).map(x=>[x.id,x]));
   const targets=new Map((data.targets as Row[]).map(x=>[x.id,x]));
   const sourceMap=new Map((data.sources as Row[]).map(x=>[x.id,x]));
+  const availability=calculateAvailability(data);
   const details=(data.datasets as Row[]).filter(d=>d.active).map(dataset=>{
-    const plans=getReachablePlans(data,dataset.id).filter(p=>targets.get(p.target_id)?.active!==0);
+    const plans=getReachablePlans(data,dataset.id,availability).filter(p=>targets.get(p.target_id)?.active!==0);
     const copyTargets=new Set(plans.map(p=>p.target_id));
     const backups=plans.filter(p=>p.protection_type==='backup'||p.protection_type==='archive');
     const source=sourceMap.get(dataset.source_id);

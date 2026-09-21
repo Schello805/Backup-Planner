@@ -6,6 +6,7 @@ import{api}from'./api';import{useCopy,type Lang}from'./i18n';import type{AppData
 import{getHelp}from'./help';
 import{dependencyStatus,getDownstreamPlans}from'./planDependencies';
 import{assignPlanLanes,findScheduleConflicts,type ScheduleConflict}from'./scheduleConflicts';
+import{PlanSourceSelector}from'./PlanSourceSelector';
 
 type View='dashboard'|'plans'|'schedule'|'settings';
 const blankPlan={name:'',source_id:'',source_target_id:null,target_id:'',software_id:null,dataset_ids:[],protection_type:'backup',schedule_type:'weekly',weekdays:[],day_of_month:1,start_time:'03:00',duration_minutes:30,retention_value:null,retention_unit:'days',version_count:null,immutable:false,encrypted:false,owner:'',color:'#16a36a',notes:'',active:true};
@@ -363,7 +364,7 @@ function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h
 </Field>
 <FormSection title={section('Data path','Datenweg')} text={section('Choose where the data comes from, what is protected, and where the copy is stored.','Lege fest, woher die Daten kommen, was geschützt wird und wo die Kopie liegt.')}/>
 <Field label={t('source')} help={h.planSource}>
-<select value={sourceValue} onChange={e=>chooseSource(e.target.value)}><option value="">Select…</option>{[...sourceOptions].sort((a:any,b:any)=>Number(b.value.startsWith('target:'))-Number(a.value.startsWith('target:'))).map((option:any)=><option key={option.value} value={option.value}>{option.label}{option.value.startsWith('source:')&&` · ${t('source')}`}</option>)}</select>
+<PlanSourceSelector value={value} data={data} label={t('source')} availableCopyLabel={t('availableCopy')} sourceLabel={t('source')} onChange={e=>chooseSource(e.target.value)}/>
 </Field>
 <Field label={t('target')} help={h.planTarget}>
 <Select value={value.target_id} onChange={(v:string)=>set('target_id',v)} options={data.targets.filter((target:Entity)=>target.id!==value.source_target_id)}/>

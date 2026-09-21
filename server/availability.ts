@@ -8,8 +8,7 @@ export type DatasetAvailability = {
   via_plan_id: string | null;
 };
 
-export function getReachablePlans(data: { datasets: unknown[]; plans: unknown[] }, datasetId: string): Row[] {
-  const availability = calculateAvailability(data);
+export function getReachablePlans(data: { datasets: unknown[]; plans: unknown[] }, datasetId: string, availability = calculateAvailability(data)): Row[] {
   const available = new Set(availability.filter(item => item.dataset_id === datasetId).map(item => `${item.node_type}:${item.node_id}`));
   return (data.plans as Row[]).filter(plan => {
     if (!plan.active || plan.deleted_at || !(plan.dataset_ids || []).includes(datasetId)) return false;
