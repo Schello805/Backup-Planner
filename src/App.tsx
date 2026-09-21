@@ -363,7 +363,7 @@ function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h
 </Field>
 <FormSection title={section('Data path','Datenweg')} text={section('Choose where the data comes from, what is protected, and where the copy is stored.','Lege fest, woher die Daten kommen, was geschützt wird und wo die Kopie liegt.')}/>
 <Field label={t('source')} help={h.planSource}>
-<select value={sourceValue} onChange={e=>chooseSource(e.target.value)}><option value="">Select…</option>{sourceOptions.map((option:any)=><option key={option.value} value={option.value}>{option.label}</option>)}</select>
+<select value={sourceValue} onChange={e=>chooseSource(e.target.value)}><option value="">Select…</option>{sourceOptions.map((option:any)=><option key={option.value} value={option.value}>{option.label}{option.value.startsWith('source:')&&` · ${t('source')}`}</option>)}</select>
 </Field>
 <Field label={t('target')} help={h.planTarget}>
 <Select value={value.target_id} onChange={(v:string)=>set('target_id',v)} options={data.targets.filter((target:Entity)=>target.id!==value.source_target_id)}/>
