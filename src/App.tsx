@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/exhaustive-deps -- plan-name suggestion intentionally reacts only to its derived value */
+/* eslint-disable react-hooks/exhaustive-deps, @typescript-eslint/no-unused-vars -- plan-name suggestion and legacy path component */
 import{useEffect,useRef,useState}from'react';
 import{Activity,Archive,CalendarDays,Check,ChevronDown,ChevronRight,CircleHelp,Database,Download,Edit3,FolderArchive,Github,HardDrive,Info,Languages,LayoutDashboard,MapPin,Moon,Plus,RefreshCw,Search,Server,Settings as SettingsIcon,ShieldCheck,Sun,Trash2,TriangleAlert,X}from'lucide-react';
 import{addDays,addMonths,eachDayOfInterval,endOfMonth,format,isSameDay,startOfMonth,startOfWeek}from'date-fns';import{de,enUS}from'date-fns/locale';
@@ -7,6 +7,7 @@ import{getHelp}from'./help';
 import{dependencyStatus,getDownstreamPlans}from'./planDependencies';
 import{assignPlanLanes,findScheduleConflicts,type ScheduleConflict}from'./scheduleConflicts';
 import{PlanSourceSelector}from'./PlanSourceSelector';
+import{ProtectionPaths}from'./ProtectionPaths';
 
 type View='dashboard'|'plans'|'schedule'|'settings';
 const blankPlan={name:'',source_id:'',source_target_id:null,target_id:'',software_id:null,dataset_ids:[],protection_type:'backup',schedule_type:'weekly',weekdays:[],day_of_month:1,start_time:'03:00',duration_minutes:30,retention_value:null,retention_unit:'days',version_count:null,immutable:false,encrypted:false,owner:'',color:'#16a36a',notes:'',active:true};
@@ -108,7 +109,7 @@ function Dashboard({data,t,onStart,onEdit}:{data:AppData;t:any;onStart:()=>void;
 <Stat icon={<HardDrive/>} value={a.counts.datasets} label={t('datasets')}/>
 <Stat icon={<TriangleAlert/>} value={a.counts.issues} label={t('issues')} tone={a.counts.issues?'orange':'green'}/>
 </section>
-<BackupChains data={data} t={t} edit={onEdit}/>
+<ProtectionPaths data={data} t={t} edit={onEdit}/>
 <DestinationOverview data={data} t={t}/>
 <section className="section-card">
 <div className="section-head">
