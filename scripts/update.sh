@@ -40,7 +40,7 @@ NEW_DEPS=$(dependency_fingerprint)
 if [[ "$OLD_DEPS" != "$NEW_DEPS" || ! -x node_modules/.bin/vite ]]; then
   DEPENDENCIES_CHANGED=1
   echo "Dependencies changed; installing packages…"
-  npm ci --no-audit --no-fund
+  npm ci --prefer-offline --no-audit --no-fund
 else
   echo "Dependencies unchanged; reusing installed packages."
 fi
