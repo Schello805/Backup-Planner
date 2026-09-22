@@ -410,7 +410,7 @@ function PlanModal({value,setValue,data,t,lang,save,onOpenSettings}:any){const h
 </Field>}<Field label={t('duration')} help={h.duration}>
 <div className="duration-input">
 <input type="number" min={durationUnit==='hours'?'0.25':'1'} step={durationUnit==='hours'?'0.25':'1'} value={durationValue} onChange={e=>set('duration_minutes',Math.max(1,Number(e.target.value)*(durationUnit==='hours'?60:1)))}/>
-<select value={durationUnit} onChange={e=>setDurationUnit(e.target.value as 'minutes'|'hours')} aria-label={t('duration')}><option value="minutes">{t('minutes')}</option><option value="hours">{lang==='de'?'Stunden':'Hours'}</option></select>
+<select value={durationUnit} onChange={e=>{const next=e.target.value as 'minutes'|'hours';if(next===durationUnit)return;const converted=next==='hours'?value.duration_minutes/60:value.duration_minutes*60;const message=lang==='de'?`Dauer in ${next==='hours'?'Stunden':'Minuten'} umrechnen (${converted} ${next==='hours'?'h':'min'})?`:`Convert duration to ${next} (${converted} ${next==='hours'?'h':'min'})?`;if(confirm(message)){setDurationUnit(next);set('duration_minutes',Math.max(1,converted))}}} aria-label={t('duration')}><option value="minutes">{t('minutes')}</option><option value="hours">{lang==='de'?'Stunden':'Hours'}</option></select>
 </div>
 </Field>
 <FormSection title={section('Retention & responsibility','Aufbewahrung & Verantwortung')} text={section('Document how long copies remain available and who takes care of this plan.','Dokumentiere, wie lange Kopien verfügbar bleiben und wer diesen Plan betreut.')}/>
