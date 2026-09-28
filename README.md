@@ -6,7 +6,7 @@ Backup Planner is a self-hosted web application for planning, visualizing, and i
 
 - weighted 3-2-1 protection score with actionable findings
 - backup, synchronization, and archive plans
-- automatic multi-stage backup chains with a visual protection path: a dataset copied to a target becomes available there as the source of a downstream plan
+- automatic multi-stage backup chains with visual original → available copy → new destination paths
 - dependency diagnostics for missing, inactive, manual, or incorrectly timed upstream plans
 - color-coded storage targets with an at-a-glance destination distribution on the dashboard
 - hierarchical sites, buildings, rooms, and cloud locations

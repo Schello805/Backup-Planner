@@ -4,6 +4,12 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.25] - 2026-09-28
+
+- Made the plan editor recognize datasets directly from active copy-producing plans as a fallback.
+- Added a visual original → available copy → new destination path for chained plans.
+- Marked inherited datasets as available “via copy” and clarified copy-specific empty states.
+
 ## [0.1.17] - 2026-09-16
 
 - Fixed backup plan deletion returning 400 Bad Request on empty request bodies.
