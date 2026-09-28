@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 2,
+  "dockerfileLines": [
+    "FROM node:24-bookworm-slim AS build",
+    "WORKDIR /app",
+    "COPY package.json package-lock.json ./",
+    "RUN npm ci",
+    "COPY index.html vite.config.ts tsconfig.json tsconfig.app.json tsconfig.node.json eslint.config.js ./",
+    "COPY public ./public",
+    "COPY src ./src",
+    "COPY server ./server",
+    "RUN npm run build && npm prune --omit=dev && npm cache clean --force",
+    "FROM node:24-bookworm-slim AS runtime",
+    "ENV NODE_ENV=production",
+    "ENV HOST=0.0.0.0",
+    "ENV PORT=3000",
+    "ENV DATA_DIR=/data",
+    "ENV BACKUP_DIR=/data/backups",
+    "ENV GITHUB_REPOSITORY=Schello805/Backup-Planner",
+    "WORKDIR /app",
+    "COPY --from=build --chown=node:node /app/package.json /app/package-lock.json ./",
+    "COPY --from=build --chown=node:node /app/node_modules ./node_modules",
+    "COPY --from=build --chown=node:node /app/dist ./dist",
+    "COPY --from=build --chown=node:node /app/dist-server ./dist-server",
+    "RUN mkdir -p /data/backups && chown -R node:node /data",
+    "USER node",
+    "EXPOSE 3000",
+    "CMD [\"npm\", \"start\"]"
+  ]
+}

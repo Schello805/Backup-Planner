@@ -34,6 +34,21 @@ Backup Planner is a self-hosted web application for planning, visualizing, and i
 
 ## Installation
 
+### CapRover
+
+The repository includes a root-level `captain-definition` and can be deployed directly from GitHub or with the CapRover CLI.
+
+1. Create a new persistent app in CapRover.
+2. Add a persistent directory in **App Configs → Persistent Directories** and map it to `/data` inside the container.
+3. Deploy this repository. CapRover detects `captain-definition` automatically.
+4. Keep the container HTTP port at `3000`; the definition exposes it automatically.
+
+The SQLite database and the ten rotating application backups are stored below `/data`. Use only one app instance because SQLite must not be written by multiple containers at the same time.
+
+Backup Planner has no login. Keep the CapRover app inside a trusted network or protect it with an authenticated access layer; do not publish it openly on the internet.
+
+### Debian / Ubuntu
+
 ```bash
 git clone https://github.com/Schello805/Backup-Planner.git
 cd Backup-Planner

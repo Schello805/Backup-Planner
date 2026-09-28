@@ -4,6 +4,12 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.26] - 2026-09-28
+
+- Added a root-level CapRover definition with a reproducible multi-stage Node.js build.
+- Prepared `/data` for persistent SQLite data and application backups in CapRover.
+- Documented the required CapRover persistence and single-instance configuration.
+
 ## [0.1.25] - 2026-09-28
 
 - Made the plan editor recognize datasets directly from active copy-producing plans as a fallback.
