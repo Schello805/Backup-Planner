@@ -4,6 +4,11 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.28] - 2026-09-28
+
+- Repair CapRover `/data` volume ownership during container startup.
+- Drop root privileges before starting Backup Planner by using `gosu node`.
+
 ## [0.1.27] - 2026-09-28
 
 - Run the CapRover container with its default user so root-owned persistent volumes remain writable.

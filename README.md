@@ -45,6 +45,8 @@ The repository includes a root-level `captain-definition` and can be deployed di
 
 The SQLite database and the ten rotating application backups are stored below `/data`. Use only one app instance because SQLite must not be written by multiple containers at the same time.
 
+At container startup, the data-directory permissions are repaired as `root`; Backup Planner itself is then started with restricted `node` user permissions.
+
 Backup Planner has no login. Keep the CapRover app inside a trusted network or protect it with an authenticated access layer; do not publish it openly on the internet.
 
 ### Debian / Ubuntu
