@@ -4,6 +4,10 @@ All notable changes are documented here. This project follows Semantic Versionin
 
 ## [Unreleased]
 
+## [0.1.27] - 2026-09-28
+
+- Run the CapRover container with its default user so root-owned persistent volumes remain writable.
+
 ## [0.1.26] - 2026-09-28
 
 - Added a root-level CapRover definition with a reproducible multi-stage Node.js build.
